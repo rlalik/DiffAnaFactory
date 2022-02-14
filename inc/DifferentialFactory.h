@@ -63,7 +63,7 @@ public:
 	void niceSlices(float mt, float mr, float mb, float ml, int ndivx, int ndivy, float xls, float xts, float xto, float yls, float yts, float yto, bool centerY = false, bool centerX = false);
 
 	void fitDiffHists(DistributionFactory * sigfac, FitterFactory & ff, HistFitParams & stdfit, bool integral_only = false);
-	bool fitDiffHist(TH1 * hist, HistFitParams & hfp, double min_entries = 0);
+	bool fitDiffHist(TH1 * hist, HistFitParams * hfp, double min_entries = 0);
 
   void setFitCallback(FitCallback * cb) { fitCallback = cb; }
 	virtual void prepareDiffCanvas();

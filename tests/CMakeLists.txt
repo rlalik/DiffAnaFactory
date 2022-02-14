@@ -7,11 +7,12 @@ link_directories(${CMAKE_CURRENT_BINARY_DIR}/lib)
 
 add_executable(UnitTester test_runner.cpp ${UnitTests_SRCS})
 target_link_libraries(UnitTester
-    MultiDimensionalFactory
-    ${ROOT_LIBRARIES}
-    ${ROOTTOOLS_LIBRARIES}
-    ${SMARTFACTORY_LIBRARIES}
-    ${FITTERFACTORY_LIBRARIES}
+    ROOT::Core ROOT::Gpad
+    RT::RootTools
+    RT::SmartFactory
+    RT::FitterFactory
+    RT::MultiDimensionalFactory
+
     ${HISTASYMMERRORS_LIBRARIES}
     jsoncpp
     ${CPPUNIT_LIBRARIES}
