@@ -1,122 +1,156 @@
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 project(MultiDimensionalFactory
-    VERSION 0.1.1
-    LANGUAGES CXX)
+  VERSION 0.2.0
+  LANGUAGES CXX)
 
 include(GNUInstallDirs)
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_INSTALL_CMAKEDIR ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME})
 
-# find_package(jsoncpp REQUIRED)
-if (NOT jsoncpp_FOUND)
-    message(STATUS "Using custom jsoncpp")
-    include_directories(/usr/include/jsoncpp/)
-    set(jsoncpp_dep jsoncpp)
-else()
-    set(jsoncpp_dep jsoncpp_lib)
+include(FetchContent)
+# cmake_tools
+FetchContent_Declare(cmake_tools
+  GIT_REPOSITORY https://github.com/rlalik/cmake_tools
+  GIT_TAG        master
+)
+FetchContent_MakeAvailable(cmake_tools)
+list(APPEND CMAKE_MODULE_PATH ${cmake_tools_SOURCE_DIR})
+
+include(find_or_fetch_package)
+find_or_fetch_package(jsoncpp https://github.com/open-source-parsers/jsoncpp
+  VERSION 1.9.6 GIT_TAG master FETCH)
+
+## find_package(jsoncpp REQUIRED)
+#if (NOT jsoncpp_FOUND)
+#    message(STATUS "Using custom jsoncpp")
+  include_directories(/usr/include/jsoncpp/)
+#    set(jsoncpp_dep jsoncpp)
+#else()
+#    set(jsoncpp_dep jsoncpp_lib)
+#endif()
+
+find_package(RootTools REQUIRED)
+find_package(SmartFactory REQUIRED)
+
+### conditional modules
+option(ENABLE_ADVANCE_CHECKS "Enables advanced checks like sanitizers" OFF)
+include(FetchContent)
+FetchContent_Declare(cmake-scripts
+  GIT_REPOSITORY https://github.com/StableCoder/cmake-scripts.git
+  GIT_TAG        774a07ece3945b4f72e3ddc11646ab7cc9a349e2 # from main after sanitizer updates
+)
+
+if(ENABLE_ADVANCE_CHECKS)
+  FetchContent_MakeAvailable(cmake-scripts)
+  list(APPEND CMAKE_MODULE_PATH
+      ${cmake-scripts_SOURCE_DIR}
+  )
+  message(STATUS "${cmake-scripts_SOURCE_DIR}")
+  include(sanitizers)
 endif()
 
-find_package(RootTools REQUIRED 0.2.0)
-find_package(SmartFactory REQUIRED EXACT 0.2.0)
 find_package(FitterFactory REQUIRED)
 
 # find_package(HistAsymmErrors QUIET)
 if (HistAsymmErrors_FOUND)
-    add_definitions("-DHAVE_HISTASYMMERRORS=1")
+  add_definitions("-DHAVE_HISTASYMMERRORS=1")
 endif()
 
 ##### find ROOT
 list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
 find_package(ROOT QUIET
-    REQUIRED COMPONENTS Core
-    OPTIONAL_COMPONENTS Cling Cint)
+  REQUIRED COMPONENTS Core
+  OPTIONAL_COMPONENTS Cling Cint)
 
 #include_directories(
-    #${HISTASYMMERRORS_INCLUDE_DIR}
+  #${HISTASYMMERRORS_INCLUDE_DIR}
 #)
 
 #link_directories(
-    #${HISTASYMMERRORS_LIBRARY_DIR}
+  #${HISTASYMMERRORS_LIBRARY_DIR}
 #)
 
-add_library(${CMAKE_PROJECT_NAME} SHARED
-    src/DistributionContext.cxx
-    src/DistributionFactory.cxx
-    src/DifferentialContext.cxx
-    src/DifferentialFactory.cxx
-    src/ExtraDimensionMapper.cxx
-    src/MultiDimAnalysisContext.cxx
-)
-add_library(RT::${CMAKE_PROJECT_NAME} ALIAS ${CMAKE_PROJECT_NAME})
+include(shared_or_static)
+shared_or_static(${PROJECT_NAME})
 
-target_include_directories(${CMAKE_PROJECT_NAME}
-    PUBLIC
-        $<INSTALL_INTERFACE:include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/inc
+add_library(${PROJECT_NAME} ${${PROJECT_NAME}_LIBRARY_TYPE}
+  src/DistributionContext.cxx
+  src/DistributionFactory.cxx
+  src/DifferentialContext.cxx
+  src/DifferentialFactory.cxx
+  src/ExtraDimensionMapper.cxx
+  src/MultiDimAnalysisContext.cxx
 )
+add_library(RT::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
-target_link_libraries(${CMAKE_PROJECT_NAME}
-    PUBLIC
-        ROOT::Core
-        RT::RootTools
-        RT::SmartFactory
-        RT::FitterFactory
-        jsoncpp
+target_include_directories(${PROJECT_NAME}
+  PUBLIC
+      $<INSTALL_INTERFACE:include>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
+  PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
 
-set_target_properties(${CMAKE_PROJECT_NAME}
-    PROPERTIES
-        SOVERSION ${PROJECT_VERSION_MAJOR}
-        VERSION ${PROJECT_VERSION}
-        PUBLIC_HEADER
-            "inc/DistributionContext.h;inc/DistributionFactory.h;inc/DifferentialContext.h;inc/DifferentialFactory.h;inc/ExtraDimensionMapper.h;inc/MultiDimDistributionContext.h"
+target_link_libraries(${PROJECT_NAME}
+  PUBLIC
+      ROOT::Core
+      RT::RootTools
+      RT::SmartFactory
+      RT::FitterFactory
+      jsoncpp
 )
 
-ROOT_GENERATE_DICTIONARY(G__${CMAKE_PROJECT_NAME}_cc
-    inc/DistributionContext.h
-    inc/DistributionFactory.h
-    inc/DifferentialContext.h
-    inc/DifferentialFactory.h
-    inc/ExtraDimensionMapper.h
-    inc/MultiDimDistributionContext.h
-    MODULE ${CMAKE_PROJECT_NAME}
-    LINKDEF LinkDef.h
+set_target_properties(${PROJECT_NAME}
+  PROPERTIES
+      SOVERSION ${PROJECT_VERSION_MAJOR}
+      VERSION ${PROJECT_VERSION}
+      PUBLIC_HEADER
+          "inc/DistributionContext.h;inc/DistributionFactory.h;inc/DifferentialContext.h;inc/DifferentialFactory.h;inc/ExtraDimensionMapper.h;inc/MultiDimDistributionContext.h"
+)
+
+ROOT_GENERATE_DICTIONARY(G__${PROJECT_NAME}_cc
+  inc/DistributionContext.h
+  inc/DistributionFactory.h
+  inc/DifferentialContext.h
+  inc/DifferentialFactory.h
+  inc/ExtraDimensionMapper.h
+  inc/MultiDimDistributionContext.h
+  MODULE ${PROJECT_NAME}
+  LINKDEF LinkDef.h
 )
 
 # Export the package for use from the build-tree
 # (this registers the build-tree with a global CMake-registry)
-export(PACKAGE ${CMAKE_PROJECT_NAME})
+export(PACKAGE ${PROJECT_NAME})
 
 # Install the export set for use with the install-tree
-install(TARGETS ${CMAKE_PROJECT_NAME}
-    EXPORT ${CMAKE_PROJECT_NAME}Targets
-    LIBRARY
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    PUBLIC_HEADER
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    )
+install(TARGETS ${PROJECT_NAME}
+  EXPORT ${PROJECT_NAME}Targets
+  LIBRARY
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  PUBLIC_HEADER
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  )
 
-install(EXPORT ${CMAKE_PROJECT_NAME}Targets
-    FILE ${CMAKE_PROJECT_NAME}Targets.cmake
-    NAMESPACE RT::
-    DESTINATION ${CMAKE_INSTALL_CMAKEDIR} COMPONENT dev)
+install(EXPORT ${PROJECT_NAME}Targets
+  FILE ${PROJECT_NAME}Targets.cmake
+  NAMESPACE RT::
+  DESTINATION ${CMAKE_INSTALL_CMAKEDIR} COMPONENT dev)
 
 include(CMakePackageConfigHelpers)
-configure_package_config_file(Config.cmake.in ${CMAKE_PROJECT_NAME}Config.cmake
-    INSTALL_DESTINATION ${CMAKE_INSTALL_CMAKEDIR}
-    PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR CMAKE_INSTALL_BINDIR)
+configure_package_config_file(Config.cmake.in ${PROJECT_NAME}Config.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_CMAKEDIR}
+  PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR CMAKE_INSTALL_BINDIR)
 
-write_basic_package_version_file(${CMAKE_PROJECT_NAME}ConfigVersion.cmake
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion)
+write_basic_package_version_file(${PROJECT_NAME}ConfigVersion.cmake
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMajorVersion)
 
 install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}Config.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}ConfigVersion.cmake
-    DESTINATION ${CMAKE_INSTALL_CMAKEDIR})
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
+  DESTINATION ${CMAKE_INSTALL_CMAKEDIR})
 
 #add_subdirectory(examples)
 enable_testing()
@@ -148,5 +182,5 @@ Module          ${CMAKE_MODULE_LINKER_FLAGS}
 Shared          ${CMAKE_SHARED_LINKER_FLAGS}\n")
 
 foreach(p LIB BIN INCLUDE CMAKE)
-    message(STATUS "CMAKE_INSTALL_${p}DIR: ${CMAKE_INSTALL_${p}DIR}")
+  message(STATUS "CMAKE_INSTALL_${p}DIR: ${CMAKE_INSTALL_${p}DIR}")
 endforeach()

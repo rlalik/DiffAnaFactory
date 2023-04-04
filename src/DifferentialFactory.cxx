@@ -371,8 +371,8 @@ void DifferentialFactory::prepareDiffCanvas()
     latex->Delete();
 }
 
-void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, FitterFactory& ff,
-                                       HistFitParams& stdfit, bool integral_only)
+void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, FF::FitterFactory& ff,
+                                       FF::HistogramFit& stdfit, bool integral_only)
 {
     if (DIM0 == ctx.dim) return;
 
@@ -421,19 +421,19 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, FitterFactor
 
                 if (!integral_only)
                 {
-                    HistFitParams* hfp = ff.findParams(hfit);
+                    auto hfp = ff.findFit(hfit);
 
                     bool cloned = false;
-                    if (!hfp)
+/*                    if (!hfp)
                     {
                         cloned = true;
                         hfp = stdfit.clone(hfit->GetName());
                         ff.insertParameters(hfp);
                     }
-                    // 				bool hasfunc = ( fflags == FitterFactory::USE_FOUND);
+*/                    // 				bool hasfunc = ( fflags == FitterFactory::USE_FOUND);
                     bool hasfunc = true;
 
-                    if (((!hasfunc) or (hasfunc and !hfp->fit_disabled)) /*and*/ /*(hDiscreteXYDiff[i][j]->GetEntries()
+                    if (((!hasfunc) or (hasfunc and !hfp->getFlagDisabled())) /*and*/ /*(hDiscreteXYDiff[i][j]->GetEntries()
                                                                                     > 50)*/
                         /* and (hDiscreteXYDiff[i][j]->GetRMS() < 15)*/)
                     {
@@ -454,7 +454,7 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, FitterFactor
 
                             res = fitDiffHist(hfit, hfp);
 
-                            if (res) hfp->update();
+//                            if (res) hfp->update();
 
                             if (fitCallback) (*fitCallback)(this, sigfac, res, hfit, bx, by, bz);
 
@@ -541,13 +541,13 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, FitterFactor
            sigfac->hSignalCounter->Integral(), ctx.hist_name.Data());
 }
 
-bool DifferentialFactory::fitDiffHist(TH1* hist, HistFitParams* hfp, double min_entries)
+bool DifferentialFactory::fitDiffHist(TH1* hist, FF::HistogramFit* hfp, double min_entries)
 {
-    Int_t bin_l = hist->FindBin(hfp->fun_l);
-    Int_t bin_u = hist->FindBin(hfp->fun_u);
+    Int_t bin_l = hist->FindBin(hfp->getFitRangeL());
+    Int_t bin_u = hist->FindBin(hfp->getFitRangeU());
 
     // rebin histogram if requested
-    if (hfp->rebin != 0) hist->Rebin(hfp->rebin);
+    if (hfp->getFlagRebin() != 0) hist->Rebin(hfp->getFlagRebin());
 
     // if no data in requested range, nothing to do here
     if (hist->Integral(bin_l, bin_u) == 0) return false;
@@ -561,7 +561,8 @@ bool DifferentialFactory::fitDiffHist(TH1* hist, HistFitParams* hfp, double min_
     TF1* tfSig = nullptr;
 
     // do fit using FitterFactory
-    bool res = FitterFactory::fit(hfp, hist, "B,Q", "", min_entries);
+    FF::FitterFactory ff;
+    bool res = ff.fit(hfp, hist, "B,Q", "");
 
     // if fit converged retrieve fit functions from histogram
     // otherwise nothing to do here

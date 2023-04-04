@@ -19,8 +19,8 @@
 #ifndef DIFFERENTIALFACTORY_H
 #define DIFFERENTIALFACTORY_H
 
-#include "DistributionFactory.h"
 #include "DifferentialContext.h"
+#include "DistributionFactory.h"
 
 #ifdef HAVE_HISTASYMMERRORS
 #include "TH2DA.h"
@@ -28,66 +28,73 @@
 
 class DifferentialFactory;
 
-typedef void (FitCallback)(DifferentialFactory * fac, DistributionFactory * sigfac, int fit_res, TH1 * h, uint x_pos, uint y_pos, uint z_pos);
+typedef void(FitCallback)(DifferentialFactory* fac, DistributionFactory* sigfac, int fit_res,
+                          TH1* h, uint x_pos, uint y_pos, uint z_pos);
 
-class DifferentialFactory : public DistributionFactory {
+class DifferentialFactory : public DistributionFactory
+{
 public:
-	DifferentialFactory();
-	DifferentialFactory(const DifferentialContext & ctx);
-	DifferentialFactory(const DifferentialContext * ctx);
-	virtual ~DifferentialFactory();
+    DifferentialFactory();
+    DifferentialFactory(const DifferentialContext& ctx);
+    DifferentialFactory(const DifferentialContext* ctx);
+    virtual ~DifferentialFactory();
 
-	DifferentialFactory & operator=(const DifferentialFactory & fa);
+    DifferentialFactory& operator=(const DifferentialFactory& fa);
 
-// 	void getDiffs(bool with_canvases = true);
+    // 	void getDiffs(bool with_canvases = true);
 
-  virtual void prepare();
-	virtual void init();
-  virtual void reinit();
-	virtual void proceed();
-// 	virtual void finalize(bool flag_details = false);
+    virtual void prepare();
+    virtual void init();
+    virtual void reinit();
+    virtual void proceed();
+    // 	virtual void finalize(bool flag_details = false);
 
-  virtual void reset();
+    virtual void reset();
 
-	virtual void binnorm();
-	virtual void scale(Float_t factor);
+    virtual void binnorm();
+    virtual void scale(Float_t factor);
 
-	virtual void applyAngDists(double a2, double a4, double corr_a2 = 0.0, double corr_a4 = 0.0);
+    virtual void applyAngDists(double a2, double a4, double corr_a2 = 0.0, double corr_a4 = 0.0);
 
-	virtual void applyBinomErrors(TH1 * N);
+    virtual void applyBinomErrors(TH1* N);
 
-  bool write(TFile * f/* = nullptr*/, bool verbose = false);
-  bool write(const char * filename/* = nullptr*/, bool verbose = false);
+    bool write(TFile* f /* = nullptr*/, bool verbose = false);
+    bool write(const char* filename /* = nullptr*/, bool verbose = false);
 
-	void niceDiffs(float mt, float mr, float mb, float ml, int ndivx, int ndivy, float xls, float xts, float xto, float yls, float yts, float yto, bool centerY = false, bool centerX = false);
-	void niceSlices(float mt, float mr, float mb, float ml, int ndivx, int ndivy, float xls, float xts, float xto, float yls, float yts, float yto, bool centerY = false, bool centerX = false);
+    void niceDiffs(float mt, float mr, float mb, float ml, int ndivx, int ndivy, float xls,
+                   float xts, float xto, float yls, float yts, float yto, bool centerY = false,
+                   bool centerX = false);
+    void niceSlices(float mt, float mr, float mb, float ml, int ndivx, int ndivy, float xls,
+                    float xts, float xto, float yls, float yts, float yto, bool centerY = false,
+                    bool centerX = false);
 
-	void fitDiffHists(DistributionFactory * sigfac, FitterFactory & ff, HistFitParams & stdfit, bool integral_only = false);
-	bool fitDiffHist(TH1 * hist, HistFitParams * hfp, double min_entries = 0);
+    void fitDiffHists(DistributionFactory* sigfac, FF::FitterFactory& ff, FF::HistogramFit& stdfit,
+                      bool integral_only = false);
+    bool fitDiffHist(TH1* hist, FF::HistogramFit* hfp, double min_entries = 0);
 
-  void setFitCallback(FitCallback * cb) { fitCallback = cb; }
-	virtual void prepareDiffCanvas();
+    void setFitCallback(FitCallback* cb) { fitCallback = cb; }
+    virtual void prepareDiffCanvas();
 
 protected:
-  virtual void rename(const char * newname);
-  virtual void chdir(const char * newdir);
+    virtual void rename(const char* newname);
+    virtual void chdir(const char* newdir);
 
 private:
-  virtual void init_diffs();
-  virtual void proceed1();
-  virtual void proceed2();
-  virtual void proceed3();
+    virtual void init_diffs();
+    virtual void proceed1();
+    virtual void proceed2();
+    virtual void proceed3();
 
 public:
-  DifferentialContext ctx;
-  ExtraDimensionMapper * diffs;
-	TCanvas ** c_Diffs;		//!
-	TObjArray * objectsFits;		//!
+    DifferentialContext ctx;
+    ExtraDimensionMapper* diffs;
+    TCanvas** c_Diffs;      //!
+    TObjArray* objectsFits; //!
 
 private:
-	FitCallback * fitCallback;
+    FitCallback* fitCallback;
 
-	ClassDef(DifferentialFactory, 1);
+    ClassDef(DifferentialFactory, 1);
 };
 
 #endif // DIFFERENTIALFACTORY_H

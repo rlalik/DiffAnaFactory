@@ -24,26 +24,27 @@
 class DifferentialContext : public DistributionContext
 {
 public:
-	AxisCfg V;     // x, y are two dimensions, V is a final Variable axis
+    AxisCfg V; // x, y are two dimensions, V is a final Variable axis
 
-	DifferentialContext();
-	DifferentialContext(const DifferentialContext & ctx);
-	virtual ~DifferentialContext();
+    DifferentialContext();
+    DifferentialContext(const DifferentialContext& ctx);
+    virtual ~DifferentialContext();
 
-	DifferentialContext & operator=(const DifferentialContext & ctx);
-	bool operator==(const DifferentialContext & ctx);
-	bool operator!=(const DifferentialContext & ctx);
+    DifferentialContext& operator=(const DifferentialContext& ctx);
+    bool operator==(const DifferentialContext& ctx);
+    bool operator!=(const DifferentialContext& ctx);
 
-	// flags
-// 	virtual bool useCuts() const { return (cutMin or cutMax); }
+    // flags
+    // 	virtual bool useCuts() const { return (cutMin or cutMax); }
 
-	virtual bool configureFromJson(const char * name);
-	virtual bool configureToJson(const char * name, const char * jsonfile);
+    virtual bool configureFromJson(const char* name);
+    virtual bool configureToJson(const char* name, const char* jsonfile);
 
-  void print() const;
+    void print() const;
+
 private:
-	TString json_fn;
-	ClassDef(DifferentialContext, 2);
+    TString json_fn;
+    ClassDef(DifferentialContext, 2);
 };
 
 #endif // DIFFERENTIALCONTEXT_H
