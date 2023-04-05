@@ -20,23 +20,28 @@
 #define EXTRADIMENSIONMAPPER_H
 
 #include "DistributionContext.h"
-#include "SmartFactory.h"
+
+#include "Pandora.h"
 
 #ifdef HAVE_HISTASYMMERRORS
 #include "TH2DA.h"
 #endif
 
 class TCanvas;
+class TH1;
+class TH1D;
+class TH1I;
+
 class TVirtualPad;
 class ExtraDimensionMapper;
 
-class ExtraDimensionMapper : public TObject, public SmartFactory
+class ExtraDimensionMapper : public TObject, public RT::Pandora
 {
 public:
     ExtraDimensionMapper(Dimensions dim, const std::string& name, TH1* hist, const AxisCfg& axis,
                          const std::string& dir_and_name);
     ExtraDimensionMapper(Dimensions dim, const std::string& name, TH1* hist, const AxisCfg& axis,
-                         const std::string& dir_and_name, SmartFactory* sf);
+                         const std::string& dir_and_name, RT::Pandora* sf);
     virtual ~ExtraDimensionMapper();
 
     UInt_t getBinsX() const { return nbins_x; }
@@ -54,8 +59,8 @@ public:
     TVirtualPad* getPad(UInt_t x, UInt_t y = 0, UInt_t z = 0);
 
     size_t getNHists() const { return nhists; }
-    TH1* operator[](int n) { return histograms[n]; }
-    const TH1* operator[](int n) const { return histograms[n]; }
+    TH1D* operator[](int n) { return histograms[n]; }
+    const TH1D* operator[](int n) const { return histograms[n]; }
 
     void Fill1D(Double_t x, Double_t v, Double_t w = 1.0);
     void Fill2D(Double_t x, Double_t y, Double_t v, Double_t w = 1.0);

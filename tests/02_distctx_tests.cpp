@@ -4,55 +4,57 @@
 
 class DistCtxCase : public CPPUNIT_NS::TestFixture
 {
-	CPPUNIT_TEST_SUITE( DistCtxCase );
-	CPPUNIT_TEST( MyTest );
-	CPPUNIT_TEST_SUITE_END();
+    CPPUNIT_TEST_SUITE(DistCtxCase);
+    CPPUNIT_TEST(MyTest);
+    CPPUNIT_TEST_SUITE_END();
 
 public:
-	void setUp() override;
+    void setUp() override;
 
 protected:
-	void MyTest();
+    void MyTest();
 
-  int bins;
-  float min, max;
-  AxisCfg axis;
-	DistributionContext d3ctx;
+    int bins;
+    float min, max;
+    AxisCfg axis;
+    DistributionContext d3ctx;
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION( DistCtxCase );
+CPPUNIT_TEST_SUITE_REGISTRATION(DistCtxCase);
 
 void DistCtxCase::setUp()
 {
-  bins = 10;
-  min = 0;
-  max = 10;
+    bins = 10;
+    min = 0;
+    max = 10;
 
-  d3ctx.dim = DIM3;
-  d3ctx.name = "test";
-  d3ctx.x.label = "d2_x"; d3ctx.x.unit = "mm";
-  d3ctx.y.label = "d2_y";
-  d3ctx.z.label = "d2_z"; d3ctx.z.unit = "cm";
+    d3ctx.dim = DIM3;
+    d3ctx.name = "test";
+    d3ctx.x.label = "d2_x";
+    d3ctx.x.unit = "mm";
+    d3ctx.y.label = "d2_y";
+    d3ctx.z.label = "d2_z";
+    d3ctx.z.unit = "cm";
 
-//   d3ctx.print();
+    //   d3ctx.print();
 }
 
 void DistCtxCase::MyTest()
 {
-  std::string output_string;
+    std::string output_string;
 
-  output_string = d3ctx.z.format_unit();
-  CPPUNIT_ASSERT_EQUAL(std::string(" [cm]"), output_string);
+    output_string = d3ctx.z.format_unit();
+    CPPUNIT_ASSERT_EQUAL(std::string(" [cm]"), output_string);
 
-  DistributionContext d3ctx_2 = d3ctx;
+    DistributionContext d3ctx_2 = d3ctx;
 
-  output_string = d3ctx_2.z.format_unit();
-  CPPUNIT_ASSERT_EQUAL(std::string(" [cm]"), output_string);
+    output_string = d3ctx_2.z.format_unit();
+    CPPUNIT_ASSERT_EQUAL(std::string(" [cm]"), output_string);
 
-  CPPUNIT_ASSERT_EQUAL(true, d3ctx == d3ctx_2);
+    CPPUNIT_ASSERT_EQUAL(true, d3ctx == d3ctx_2);
 
-  d3ctx_2.x.bins = 13;
-  CPPUNIT_ASSERT_EQUAL(false, d3ctx == d3ctx_2);
+    d3ctx_2.x.bins = 13;
+    CPPUNIT_ASSERT_EQUAL(false, d3ctx == d3ctx_2);
 
-  CPPUNIT_ASSERT_EQUAL(true, d3ctx == d3ctx);
+    CPPUNIT_ASSERT_EQUAL(true, d3ctx == d3ctx);
 }

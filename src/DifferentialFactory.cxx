@@ -240,11 +240,11 @@ void DifferentialFactory::niceDiffs(float mt, float mr, float mb, float ml, int 
             UInt_t bx, by, bz;
             diffs->reverseBin(i, bx, by, bz);
             TVirtualPad* p = diffs->getPad(bx, by, bz);
-            RT::NicePad(p, mt, mr, mb, ml);
+            RT::Hist::NicePad(p, mt, mr, mb, ml);
 
             TH1* h = (*diffs)[i];
-            RT::NiceHistogram(h, ndivx, ndivy, xls, 0.005, xts, xto, yls, 0.005, yts, yto, centerY,
-                              centerX);
+            RT::Hist::NiceHistogram(h, ndivx, ndivy, xls, 0.005, xts, xto, yls, 0.005, yts, yto,
+                                    centerY, centerX);
         }
     }
 }
@@ -412,7 +412,7 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, FF::FitterFa
                 }
 
                 // 		can->Draw(h1opts); FIXME ???
-                RT::NicePad(pad, 0.10, 0.01, 0.15, 0.10);
+                RT::Hist::NicePad(pad, 0.10, 0.01, 0.15, 0.10);
 
                 TH1D* hfit = diffs->get(bx, by, bz);
                 hfit->SetStats(0);
@@ -424,25 +424,27 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, FF::FitterFa
                     auto hfp = ff.findFit(hfit);
 
                     bool cloned = false;
-/*                    if (!hfp)
-                    {
-                        cloned = true;
-                        hfp = stdfit.clone(hfit->GetName());
-                        ff.insertParameters(hfp);
-                    }
-*/                    // 				bool hasfunc = ( fflags == FitterFactory::USE_FOUND);
+                    /*                    if (!hfp)
+                                        {
+                                            cloned = true;
+                                            hfp = stdfit.clone(hfit->GetName());
+                                            ff.insertParameters(hfp);
+                                        }
+                    */                    // 				bool hasfunc = ( fflags == FitterFactory::USE_FOUND);
                     bool hasfunc = true;
 
-                    if (((!hasfunc) or (hasfunc and !hfp->getFlagDisabled())) /*and*/ /*(hDiscreteXYDiff[i][j]->GetEntries()
-                                                                                    > 50)*/
+                    if (((!hasfunc) or
+                         (hasfunc and
+                          !hfp->getFlagDisabled())) /*and*/ /*(hDiscreteXYDiff[i][j]->GetEntries()
+                                                          > 50)*/
                         /* and (hDiscreteXYDiff[i][j]->GetRMS() < 15)*/)
                     {
                         if ((hfit->GetEntries() / hfit->GetRMS()) < 5)
                         {
                             // 						PR(( hDiscreteXYDiff[i][j]->GetEntries() /
                             // hDiscreteXYDiff[i][j]->GetRMS() ));
-                            //						pad->SetFillColor(40);		// FIXME I dont want colors in
-                            //the putput
+                            //						pad->SetFillColor(40);		// FIXME I dont want colors
+                            //in the putput
                             info_text = 1;
                         }
                         else
@@ -454,26 +456,25 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, FF::FitterFa
 
                             res = fitDiffHist(hfit, hfp);
 
-//                            if (res) hfp->update();
+                            //                            if (res) hfp->update();
 
                             if (fitCallback) (*fitCallback)(this, sigfac, res, hfit, bx, by, bz);
 
                             // 						FIXME
-                            // 						std::cout << "    Signal: " << res.signal << " +/- " <<
-                            // res.signal_err << std::endl;
+                            // 						std::cout << "    Signal: " << res.signal << " +/- "
+                            // << res.signal_err << std::endl;
 
                             // 						hSliceXYDiff[i]->SetBinContent(1+j, res.signal);
                             // 						hSliceXYDiff[i]->SetBinError(1+j,
-                            // res.signal_err); 						hSignalCounter->SetBinContent(1+bx, 1+by, 1+bz,
-                            // res.signal); 						hSignalCounter->SetBinError(1+bx, 1+by, 1+bz,
-                            // res.signal_err);
+                            // res.signal_err); 						hSignalCounter->SetBinContent(1+bx, 1+by,
+                            // 1+bz, res.signal);
+                            // hSignalCounter->SetBinError(1+bx, 1+by, 1+bz, res.signal_err);
 
                             // 						if (res.mean != 0)
                             // 						{
                             // 							hSliceXYFitQA[i]->SetBinContent(1+j,
-                            // res.mean); 							hSliceXYFitQA[i]->SetBinError(1+j, res.sigma);
-                            // 							hSliceXYChi2NDF[i]->SetBinContent(1+j,
-                            // res.chi2/res.ndf);
+                            // res.mean); 							hSliceXYFitQA[i]->SetBinError(1+j,
+                            // res.sigma); 							hSliceXYChi2NDF[i]->SetBinContent(1+j, res.chi2/res.ndf);
                             // 						}
                         }
                     }
@@ -493,9 +494,10 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, FF::FitterFa
                     // 					res.signal = 0;
                     // 				}
 
-                    // 				res.signal_err = RootTools::calcTotalError( hDiscreteXYDiff[i][j], 1,
-                    // hDiscreteXYDiff[i][j]->GetNbinsX() ); 				hSliceXYDiff[i]->SetBinContent(1+j,
-                    // res.signal); 				hSliceXYDiff[i]->SetBinError(1+j, res.signal_err);
+                    // 				res.signal_err = RootTools::calcTotalError( hDiscreteXYDiff[i][j],
+                    // 1, hDiscreteXYDiff[i][j]->GetNbinsX() );
+                    // hSliceXYDiff[i]->SetBinContent(1+j, res.signal);
+                    // hSliceXYDiff[i]->SetBinError(1+j, res.signal_err);
                     // 				hDiscreteXYSig->SetBinContent(1+i, 1+j, res.signal);
                     // 				hDiscreteXYSig->SetBinError(1+i, 1+j, res.signal_err);
 

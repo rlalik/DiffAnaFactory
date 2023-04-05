@@ -16,15 +16,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __CINT__
+#include "DistributionFactory.h"
 
 #include <TCanvas.h>
+#include <TH3.h>
 #include <TList.h>
 #include <TSystem.h>
-
-#endif /* __CINT__ */
-
-#include "DistributionFactory.h"
 
 #define PR(x)                                                                                      \
     std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
@@ -32,21 +29,21 @@
 // const Option_t h1opts[] = "h,E1";
 
 DistributionFactory::DistributionFactory()
-    : SmartFactory(""), ctx(DistributionContext()), hSignalCounter(nullptr),
-      cSignalCounter(nullptr), drawOpts("colz")
+    : RT::Pandora(""), ctx(DistributionContext()), hSignalCounter(nullptr), cSignalCounter(nullptr),
+      drawOpts("colz")
 {
     prepare();
 }
 
 DistributionFactory::DistributionFactory(const DistributionContext& context)
-    : SmartFactory(""), ctx(context), hSignalCounter(nullptr), cSignalCounter(nullptr),
+    : RT::Pandora(""), ctx(context), hSignalCounter(nullptr), cSignalCounter(nullptr),
       drawOpts("colz")
 {
     prepare();
 }
 
 DistributionFactory::DistributionFactory(const DistributionContext* context)
-    : SmartFactory(""), ctx(*context), hSignalCounter(nullptr), cSignalCounter(nullptr),
+    : RT::Pandora(""), ctx(*context), hSignalCounter(nullptr), cSignalCounter(nullptr),
       drawOpts("colz")
 {
     prepare();
@@ -58,7 +55,7 @@ DistributionFactory& DistributionFactory::operator=(const DistributionFactory& f
 {
     if (this == &fa) return *this;
 
-    (SmartFactory)(*this) = (SmartFactory)fa;
+    (RT::Pandora)(*this) = (RT::Pandora)fa;
     DistributionFactory* nthis = this; // new DistributionFactory(fa.ctx);
 
     nthis->ctx = fa.ctx;
@@ -201,8 +198,8 @@ void DistributionFactory::binnorm()
     // 	if (ctx.useClip())
     // 	{
     // 		if (hDiscreteXY) hDiscreteXY->Scale( 1.0 / ( hDiscreteXY->GetXaxis()->GetBinWidth(1) *
-    // hDiscreteXY->GetYaxis()->GetBinWidth(1) ) ); 		if (hSignalCounter) hSignalCounter->Scale( 1.0 /
-    // ( hSignalCounter->GetXaxis()->GetBinWidth(1) * hSignalCounter->GetYaxis()->GetBinWidth(1) )
+    // hDiscreteXY->GetYaxis()->GetBinWidth(1) ) ); 		if (hSignalCounter) hSignalCounter->Scale( 1.0
+    // / ( hSignalCounter->GetXaxis()->GetBinWidth(1) * hSignalCounter->GetYaxis()->GetBinWidth(1) )
     // );
     //
     // // 		if (ctx.useDiff())
@@ -230,15 +227,15 @@ void DistributionFactory::niceHisto(TVirtualPad* pad, TH1* hist, float mt, float
                                     float ml, int ndivx, int ndivy, float xls, float xts, float xto,
                                     float yls, float yts, float yto, bool centerY, bool centerX)
 {
-    RT::NicePad(pad, mt, mr, mb, ml);
-    RT::NiceHistogram(hist, ndivx, ndivy, xls, 0.005, xts, xto, yls, 0.005, yts, yto, centerY,
-                      centerX);
+    RT::Hist::NicePad(pad, mt, mr, mb, ml);
+    RT::Hist::NiceHistogram(hist, ndivx, ndivy, xls, 0.005, xts, xto, yls, 0.005, yts, yto, centerY,
+                            centerX);
 }
 
-void DistributionFactory::niceHists(RT::PadFormat pf, const RT::GraphFormat& format)
+void DistributionFactory::niceHists(RT::Hist::PadFormat pf, const RT::Hist::GraphFormat& format)
 {
-    RT::NicePad(cSignalCounter->cd(), pf);
-    RT::NiceHistogram((TH2*)hSignalCounter, format);
+    RT::Hist::NicePad(cSignalCounter->cd(), pf);
+    RT::Hist::NiceHistogram((TH2*)hSignalCounter, format);
     hSignalCounter->GetYaxis()->CenterTitle(kTRUE);
 }
 
@@ -249,10 +246,7 @@ void DistributionFactory::prepareCanvas(const char* draw_opts)
 
     hSignalCounter->GetXaxis()->SetTitle(ctx.x.format_string());
     if (DIM0 == ctx.dim) { hSignalCounter->GetYaxis()->SetTitle(ctx.axis_text.Data()); }
-    else if (DIM1 == ctx.dim)
-    {
-        hSignalCounter->GetYaxis()->SetTitle(ctx.axis_text.Data());
-    }
+    else if (DIM1 == ctx.dim) { hSignalCounter->GetYaxis()->SetTitle(ctx.axis_text.Data()); }
     else if (DIM2 == ctx.dim)
     {
         hSignalCounter->GetYaxis()->SetTitle(ctx.y.format_string());
@@ -436,10 +430,7 @@ void DistributionFactory::applyAngDists(TH1* h, double a2, double a4, double cor
         double angmap = f->Integral(bin_l, bin_r);
 
         if (has_corr) { corr_factor = f_corr->Integral(bin_l, bin_r); }
-        else
-        {
-            angmap /= bin_w;
-        }
+        else { angmap /= bin_w; }
 
         double scaling_factor = angmap / corr_factor;
         for (size_t y = 1; y <= bins_y; ++y)
@@ -499,6 +490,6 @@ bool copyHistogram(TH1* src, TH1* dst, bool with_functions)
     return true;
 }
 
-void DistributionFactory::rename(const char* newname) { SmartFactory::rename(newname); }
+void DistributionFactory::rename(const char* newname) { Pandora::rename(newname); }
 
-void DistributionFactory::chdir(const char* newdir) { SmartFactory::chdir(newdir); }
+void DistributionFactory::chdir(const char* newdir) { Pandora::chdir(newdir); }

@@ -21,7 +21,7 @@
 
 #include <TNamed.h>
 
-class AxisCfg
+class AxisCfg final
 {
     // class AxisCfg : public TObject {
 public:
@@ -31,7 +31,7 @@ public:
     bool operator==(const AxisCfg& ctx);
     bool operator!=(const AxisCfg& ctx);
 
-    virtual ~AxisCfg() {}
+    ~AxisCfg() {}
 
     TString label; // label for the axis
     TString unit;  // unit for the axis

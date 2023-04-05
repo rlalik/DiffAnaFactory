@@ -19,482 +19,430 @@
 #include "DistributionContext.h"
 #include <json/json.h>
 
-#include <sys/stat.h>
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <sys/stat.h>
 
-#define PR(x) std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
+#define PR(x)                                                                                      \
+    std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
 
-AxisCfg::AxisCfg()
-  : bins(0)
-  , min(0)
-  , max(0)
-  , bins_arr(nullptr)
-  , delta(0.0)
-  , var(nullptr)
+AxisCfg::AxisCfg() : bins(0), min(0), max(0), bins_arr(nullptr), delta(0.0), var(nullptr) {}
+
+AxisCfg::AxisCfg(const AxisCfg& a) { *this = a; }
+
+AxisCfg& AxisCfg::operator=(const AxisCfg& a)
 {
+    if (this == &a) return *this;
+
+    label = a.label;
+    unit = a.unit;
+
+    bins = a.bins;
+    min = a.min;
+    max = a.max;
+    bins_arr = a.bins_arr;
+    delta = a.delta;
+    var = a.var;
+
+    return *this;
 }
 
-AxisCfg::AxisCfg(const AxisCfg & a)
+bool AxisCfg::operator==(const AxisCfg& ctx) { return (this->bins == ctx.bins); }
+
+bool AxisCfg::operator!=(const AxisCfg& ctx) { return (this->bins != ctx.bins); }
+
+TString AxisCfg::format_hist_string(const char* title, const char* ylabel) const
 {
-	*this = a;
+    return TString::Format("%s;%s;%s", title, format_string().Data(), ylabel);
 }
 
-AxisCfg & AxisCfg::operator=(const AxisCfg & a)
-{
-  if (this == &a) return *this;
-
-	label = a.label;
-	unit = a.unit;
-
-	bins = a.bins;
-	min = a.min;
-	max = a.max;
-	bins_arr = a.bins_arr;
-	delta = a.delta;
-	var = a.var;
-
-	return *this;
-}
-
-bool AxisCfg::operator==(const AxisCfg & ctx)
-{
-	return (this->bins == ctx.bins);
-}
-
-bool AxisCfg::operator!=(const AxisCfg & ctx)
-{
-	return (this->bins != ctx.bins);
-}
-
-TString AxisCfg::format_hist_string(const char * title,
-                           const char * ylabel) const
-{
-    return TString::Format("%s;%s;%s",
-                           title,
-                           format_string().Data(),
-                           ylabel);
-}
-
-TString AxisCfg::format_unit() const
-{
-	return format_unit(unit);
-}
+TString AxisCfg::format_unit() const { return format_unit(unit); }
 
 TString AxisCfg::format_string() const
 {
-  return TString::Format("%s%s", label.Data(), format_unit().Data());
+    return TString::Format("%s%s", label.Data(), format_unit().Data());
 }
 
+TString AxisCfg::format_unit(const char* unit) { return format_unit(TString(unit)); }
 
-TString AxisCfg::format_unit(const char * unit)
+TString AxisCfg::format_unit(const TString& unit)
 {
-  return format_unit(TString(unit));
-}
+    TString funit;
+    if (unit.Length()) funit = " [" + unit + "]";
 
-TString AxisCfg::format_unit(const TString & unit)
-{
-	TString funit;
-	if (unit.Length())
-		funit = " [" + unit + "]";
-
-	return funit;
+    return funit;
 }
 
 void AxisCfg::print() const
 {
-  if (!bins_arr)
-    printf(" Axis: %d bins in [ %f; %f ] range -- %s\n",
-           bins, min, max, format_string().Data());
-  else
-  {
-    TString buff;
-    for (uint i = 0; i < bins; ++i)
+    if (!bins_arr)
+        printf(" Axis: %d bins in [ %f; %f ] range -- %s\n", bins, min, max,
+               format_string().Data());
+    else
     {
-      buff += "| ";
-      buff += bins_arr[i];
-      buff += " ";
+        TString buff;
+        for (uint i = 0; i < bins; ++i)
+        {
+            buff += "| ";
+            buff += bins_arr[i];
+            buff += " ";
+        }
+        buff += "|";
+        printf(" Axis: %d in %s -- %s\n", bins, buff.Data(), format_string().Data());
     }
-    buff += "|";
-    printf(" Axis: %d in %s -- %s\n",
-           bins, buff.Data(), format_string().Data());
-  }
 }
 
 DistributionContext::DistributionContext()
-  : TNamed()
-  , dim(NOINIT)
-  , var_weight(nullptr)
-  , json_found(false)
+    : TNamed(), dim(NOINIT), var_weight(nullptr), json_found(false)
 {
 }
 
 DistributionContext::DistributionContext(Dimensions dim)
-  : TNamed()
-  , dim(dim)
-  , var_weight(nullptr)
-  , json_found(false)
+    : TNamed(), dim(dim), var_weight(nullptr), json_found(false)
 {
 }
 
-DistributionContext::DistributionContext(const DistributionContext & ctx)
-  : TNamed()
+DistributionContext::DistributionContext(const DistributionContext& ctx) : TNamed()
 {
-	*this = ctx;
-	name = ctx.name;
+    *this = ctx;
+    name = ctx.name;
 }
 
 bool DistributionContext::update()
 {
-	x.delta = ((x.max - x.min)/x.bins);
-	y.delta = ((y.max - y.min)/y.bins);
-  z.delta = ((z.max - z.min)/z.bins);
+    x.delta = ((x.max - x.min) / x.bins);
+    y.delta = ((y.max - y.min) / y.bins);
+    z.delta = ((z.max - z.min) / z.bins);
 
-  if (0 == hist_name.Length())
-    hist_name = name;
+    if (0 == hist_name.Length()) hist_name = name;
 
-  if (0 == dir_name.Length())
-    dir_name = hist_name;
+    if (0 == dir_name.Length()) dir_name = hist_name;
 
-  if (name.EndsWith("Ctx"))
-    SetName(name);
-  else
-    SetName(name+"Ctx");
+    if (name.EndsWith("Ctx"))
+        SetName(name);
+    else
+        SetName(name + "Ctx");
 
-  format_diff_axis();
+    format_diff_axis();
 
-  return true;
+    return true;
 }
 
 int DistributionContext::validate() const
 {
-  if (0 == name.Length()) return 1;
-  if (DIM0 <= dim && x.bins and !x.var) return 11;
-  if (DIM1 <= dim && x.bins and !x.var) return 11;
-  if (DIM2 <= dim && y.bins and !y.var) return 12;
-  if (DIM3 == dim && z.bins and !z.var) return 13;
+    if (0 == name.Length()) return 1;
+    if (DIM0 <= dim && x.bins and !x.var) return 11;
+    if (DIM1 <= dim && x.bins and !x.var) return 11;
+    if (DIM2 <= dim && y.bins and !y.var) return 12;
+    if (DIM3 == dim && z.bins and !z.var) return 13;
 
-  return 0;
-// 	return update();
+    return 0;
+    // 	return update();
 }
 
-DistributionContext::~DistributionContext()
-{}
+DistributionContext::~DistributionContext() {}
 
-bool jsonReadTStringKey(const Json::Value & jsondata, const char * key, TString & target)
+bool jsonReadTStringKey(const Json::Value& jsondata, const char* key, TString& target)
 {
-	if (jsondata.isMember(key))
-	{
-		target = jsondata[key].asCString();
-		std::cout << "    + " << key << ": " << target.Data() << std::endl;
-		return true;
-	}
-	return false;
+    if (jsondata.isMember(key))
+    {
+        target = jsondata[key].asCString();
+        std::cout << "    + " << key << ": " << target.Data() << std::endl;
+        return true;
+    }
+    return false;
 }
 
-bool jsonReadIntKey(const Json::Value & jsondata, const char * key, int & target)
+bool jsonReadIntKey(const Json::Value& jsondata, const char* key, int& target)
 {
-	if (jsondata.isMember(key))
-	{
-		target = jsondata[key].asInt();
-		std::cout << "    + " << key << ": " << target << std::endl;
-		return true;
-	}
-	return false;
+    if (jsondata.isMember(key))
+    {
+        target = jsondata[key].asInt();
+        std::cout << "    + " << key << ": " << target << std::endl;
+        return true;
+    }
+    return false;
 }
 
-bool jsonReadUIntKey(const Json::Value & jsondata, const char * key, uint & target)
+bool jsonReadUIntKey(const Json::Value& jsondata, const char* key, uint& target)
 {
-	if (jsondata.isMember(key))
-	{
-		target = jsondata[key].asInt();
-		std::cout << "    + " << key << ": " << target << std::endl;
-		return true;
-	}
-	return false;
+    if (jsondata.isMember(key))
+    {
+        target = jsondata[key].asInt();
+        std::cout << "    + " << key << ": " << target << std::endl;
+        return true;
+    }
+    return false;
 }
 
-bool jsonReadFloatKey(const Json::Value & jsondata, const char * key, float & target)
+bool jsonReadFloatKey(const Json::Value& jsondata, const char* key, float& target)
 {
-	if (jsondata.isMember(key))
-	{
-		target = jsondata[key].asFloat();
-		std::cout << "    + " << key << ": " << target << std::endl;
-		return true;
-	}
-	return false;
+    if (jsondata.isMember(key))
+    {
+        target = jsondata[key].asFloat();
+        std::cout << "    + " << key << ": " << target << std::endl;
+        return true;
+    }
+    return false;
 }
 
-bool jsonReadDoubleKey(const Json::Value & jsondata, const char * key, double & target)
+bool jsonReadDoubleKey(const Json::Value& jsondata, const char* key, double& target)
 {
-	if (jsondata.isMember(key))
-	{
-		target = jsondata[key].asDouble();
-		std::cout << "    + " << key << ": " << target << std::endl;
-		return true;
-	}
-	return false;
+    if (jsondata.isMember(key))
+    {
+        target = jsondata[key].asDouble();
+        std::cout << "    + " << key << ": " << target << std::endl;
+        return true;
+    }
+    return false;
 }
 
-bool DistributionContext::configureFromJson(const char * name)
+bool DistributionContext::configureFromJson(const char* name)
 {
-	std::ifstream ifs(json_fn.Data());
-	if (!ifs.is_open())
-		return false;
+    std::ifstream ifs(json_fn.Data());
+    if (!ifs.is_open()) return false;
 
-	std::cout << "  Found JSON config file for " << name << std::endl;
-	Json::Value ana, cfg, axis;
-	Json::Reader reader;
+    std::cout << "  Found JSON config file for " << name << std::endl;
+    Json::Value ana, cfg, axis;
+    Json::Reader reader;
 
-	bool parsing_success = reader.parse(ifs, ana);
+    bool parsing_success = reader.parse(ifs, ana);
 
-	if (!parsing_success)
-	{
-		std::cout << "  Parsing failed\n";
-		return false;
-	}
-	else
-		std::cout << "  Parsing successfull\n";
+    if (!parsing_success)
+    {
+        std::cout << "  Parsing failed\n";
+        return false;
+    }
+    else
+        std::cout << "  Parsing successfull\n";
 
-	if (!ana.isMember(name))
-	{
-		std::cout << "  No data for " << name << std::endl;
-		return false;
-	}
+    if (!ana.isMember(name))
+    {
+        std::cout << "  No data for " << name << std::endl;
+        return false;
+    }
 
-	cfg = ana[name];
+    cfg = ana[name];
 
-	const size_t axis_num = 3;
-	const char * axis_labels[axis_num] = { "x", "y", "z" };
-	AxisCfg * axis_ptrs[axis_num] = { &x, &y, &z };
+    const size_t axis_num = 3;
+    const char* axis_labels[axis_num] = {"x", "y", "z"};
+    AxisCfg* axis_ptrs[axis_num] = {&x, &y, &z};
 
-	for (uint i = 0; i < axis_num; ++i)
-	{
-		if (!cfg.isMember(axis_labels[i]))
-			continue;
-			
-		axis = cfg[axis_labels[i]];
+    for (uint i = 0; i < axis_num; ++i)
+    {
+        if (!cfg.isMember(axis_labels[i])) continue;
 
-// 		jsonReadTStringKey(axis, "title", axis_ptrs[i]->title);
-		jsonReadTStringKey(axis, "label", axis_ptrs[i]->label);
-		jsonReadTStringKey(axis, "unit", axis_ptrs[i]->unit);
-// 		jsonReadIntKey(axis, "bins", axis_ptrs[i]->bins);
-		jsonReadUIntKey(axis, "bins", axis_ptrs[i]->bins);
-		jsonReadDoubleKey(axis, "min", axis_ptrs[i]->min);
-		jsonReadDoubleKey(axis, "max", axis_ptrs[i]->max);
-	}
+        axis = cfg[axis_labels[i]];
 
-	ifs.close();
-	return true;
-}
+        // 		jsonReadTStringKey(axis, "title", axis_ptrs[i]->title);
+        jsonReadTStringKey(axis, "label", axis_ptrs[i]->label);
+        jsonReadTStringKey(axis, "unit", axis_ptrs[i]->unit);
+        // 		jsonReadIntKey(axis, "bins", axis_ptrs[i]->bins);
+        jsonReadUIntKey(axis, "bins", axis_ptrs[i]->bins);
+        jsonReadDoubleKey(axis, "min", axis_ptrs[i]->min);
+        jsonReadDoubleKey(axis, "max", axis_ptrs[i]->max);
+    }
 
-bool DistributionContext::configureToJson(const char * name, const char * jsonfile)
-{
-	(void)jsonfile;
-
-	Json::Value ana, cfg, axis;
-
-	cfg["title"]	= "d^{2}N/dp_{t}dy.{cm}";
-
-	axis["bins"]	= 0;
-	axis["min"]		= 0;
-	axis["max"]		= 0;
-	axis["label"]	= "";
-	axis["var"]		= "";
-
-	cfg["x"] = axis;
-	cfg["y"] = axis;
-	cfg["z"] = axis;
-	cfg["V"] = axis;
-
-	ana[name] = cfg;
-
-	std::cout << ana;
-
-// 	Json::StyledWriter sw;
-// 	std::cout << sw.write(ana);
-	
-// 	Json::FastWriter fw;
-// 	std::cout << fw.write(ana);
-
-	return true;
-}
-
-bool DistributionContext::findJsonFile(const char * initial_path, const char * filename, int search_depth)
-{
-	const size_t max_len = 1024*16;
-	int depth_counter = 0;
-	char * resolv_name = new char[max_len];
-	char * test_path = new char[max_len];
-	struct stat buffer;
-
-	strncpy(test_path, initial_path, max_len);
-
-	char * ret_val = 0;
-	while (true)
-	{
-		ret_val = realpath(test_path, resolv_name);
-		if (!ret_val)
-			break;
-
-		std::string name = resolv_name;
-		name += "/";
-		name += filename;
-
-		if (stat (name.c_str(), &buffer) == 0)
-		{
-			json_found = true;
-			json_fn = name;
-			break;
-		}
-
-		strncpy(test_path, resolv_name, max_len);
-		strncpy(test_path+strlen(test_path), "/..", 4);
-
-		if (strcmp(resolv_name, "/") == 0)
-			break;
-
-		++depth_counter;
-		if (search_depth >= 0 and (depth_counter > search_depth))
-			break;
-	}
-
-	if (json_found)
-		printf(" Found json config at %s\n", json_fn.Data());
-
-	delete [] resolv_name;
-	delete [] test_path;
-
-	return json_found;
-}
-
-DistributionContext & DistributionContext::operator=(const DistributionContext & ctx)
-{
-  if (this == &ctx) return *this;
-
-  dim = ctx.dim;
-// 	ctx_name = ctx.ctx_name;
-  dir_name = ctx.dir_name;
-	hist_name = ctx.hist_name;
-	diff_var_name = ctx.diff_var_name;
-
-  title = ctx.title;
-  label = ctx.label;
-  unit = ctx.unit;
-  axis_text = ctx.axis_text;
-
-  x = ctx.x;
-	y = ctx.y;
-  z = ctx.z;
-
-	var_weight = ctx.var_weight;
-
-	return *this;
-}
-
-bool DistributionContext::operator==(const DistributionContext & ctx)
-{
-  if (this == &ctx)
+    ifs.close();
     return true;
-
-  if (this->dim != ctx.dim)
-	{
-		fprintf(stderr, "Not the same dimensions: %d vs %d\n", this->dim, ctx.dim);
-		return false;
-	}
-
-	if (this->x != ctx.x)
-	{
-		fprintf(stderr, "Different number of x bins: %d vs %d\n", this->x.bins, ctx.x.bins);
-		return false;
-	}
-
-	if (this->y != ctx.y)
-	{
-		fprintf(stderr, "Different number of y bins: %d vs %d\n", this->y.bins, ctx.y.bins);
-		return false;
-	}
-
-	if (this->z != ctx.z)
-	{
-		fprintf(stderr, "Different number of z bins: %d vs %d\n", this->z.bins, ctx.z.bins);
-		return false;
-	}
-
-	return true;
 }
 
-bool DistributionContext::operator!=(const DistributionContext & ctx)
+bool DistributionContext::configureToJson(const char* name, const char* jsonfile)
 {
-	return !operator==(ctx);
+    (void)jsonfile;
+
+    Json::Value ana, cfg, axis;
+
+    cfg["title"] = "d^{2}N/dp_{t}dy.{cm}";
+
+    axis["bins"] = 0;
+    axis["min"] = 0;
+    axis["max"] = 0;
+    axis["label"] = "";
+    axis["var"] = "";
+
+    cfg["x"] = axis;
+    cfg["y"] = axis;
+    cfg["z"] = axis;
+    cfg["V"] = axis;
+
+    ana[name] = cfg;
+
+    std::cout << ana;
+
+    // 	Json::StyledWriter sw;
+    // 	std::cout << sw.write(ana);
+
+    // 	Json::FastWriter fw;
+    // 	std::cout << fw.write(ana);
+
+    return true;
 }
+
+bool DistributionContext::findJsonFile(const char* initial_path, const char* filename,
+                                       int search_depth)
+{
+    const size_t max_len = 1024 * 16;
+    int depth_counter = 0;
+    char* resolv_name = new char[max_len];
+    char* test_path = new char[max_len];
+    struct stat buffer;
+
+    strncpy(test_path, initial_path, max_len);
+
+    char* ret_val = 0;
+    while (true)
+    {
+        ret_val = realpath(test_path, resolv_name);
+        if (!ret_val) break;
+
+        std::string name = resolv_name;
+        name += "/";
+        name += filename;
+
+        if (stat(name.c_str(), &buffer) == 0)
+        {
+            json_found = true;
+            json_fn = name;
+            break;
+        }
+
+        strncpy(test_path, resolv_name, max_len);
+        strncpy(test_path + strlen(test_path), "/..", 4);
+
+        if (strcmp(resolv_name, "/") == 0) break;
+
+        ++depth_counter;
+        if (search_depth >= 0 and (depth_counter > search_depth)) break;
+    }
+
+    if (json_found) printf(" Found json config at %s\n", json_fn.Data());
+
+    delete[] resolv_name;
+    delete[] test_path;
+
+    return json_found;
+}
+
+DistributionContext& DistributionContext::operator=(const DistributionContext& ctx)
+{
+    if (this == &ctx) return *this;
+
+    dim = ctx.dim;
+    // 	ctx_name = ctx.ctx_name;
+    dir_name = ctx.dir_name;
+    hist_name = ctx.hist_name;
+    diff_var_name = ctx.diff_var_name;
+
+    title = ctx.title;
+    label = ctx.label;
+    unit = ctx.unit;
+    axis_text = ctx.axis_text;
+
+    x = ctx.x;
+    y = ctx.y;
+    z = ctx.z;
+
+    var_weight = ctx.var_weight;
+
+    return *this;
+}
+
+bool DistributionContext::operator==(const DistributionContext& ctx)
+{
+    if (this == &ctx) return true;
+
+    if (this->dim != ctx.dim)
+    {
+        fprintf(stderr, "Not the same dimensions: %d vs %d\n", this->dim, ctx.dim);
+        return false;
+    }
+
+    if (this->x != ctx.x)
+    {
+        fprintf(stderr, "Different number of x bins: %d vs %d\n", this->x.bins, ctx.x.bins);
+        return false;
+    }
+
+    if (this->y != ctx.y)
+    {
+        fprintf(stderr, "Different number of y bins: %d vs %d\n", this->y.bins, ctx.y.bins);
+        return false;
+    }
+
+    if (this->z != ctx.z)
+    {
+        fprintf(stderr, "Different number of z bins: %d vs %d\n", this->z.bins, ctx.z.bins);
+        return false;
+    }
+
+    return true;
+}
+
+bool DistributionContext::operator!=(const DistributionContext& ctx) { return !operator==(ctx); }
 
 void DistributionContext::format_diff_axis()
 {
-  TString hunit = "1/";
-  if (DIM0 <= dim) hunit += x.unit.Data();
-  if (DIM1 <= dim) hunit += x.unit.Data();
-  if (DIM2 <= dim) hunit += y.unit.Data();
-  if (DIM3 == dim) hunit += z.unit.Data();
+    TString hunit = "1/";
+    if (DIM0 <= dim) hunit += x.unit.Data();
+    if (DIM1 <= dim) hunit += x.unit.Data();
+    if (DIM2 <= dim) hunit += y.unit.Data();
+    if (DIM3 == dim) hunit += z.unit.Data();
 
-  UInt_t dim_cnt = 0;
-  TString htitle;
-  if (DIM3 == dim) dim_cnt = 3;
-  if (DIM2 == dim) dim_cnt = 2;
-  if (DIM1 == dim) dim_cnt = 1;
-  if (DIM0 == dim) dim_cnt = 0;
+    UInt_t dim_cnt = 0;
+    TString htitle;
+    if (DIM3 == dim) dim_cnt = 3;
+    if (DIM2 == dim) dim_cnt = 2;
+    if (DIM1 == dim) dim_cnt = 1;
+    if (DIM0 == dim) dim_cnt = 0;
 
-  if (DIM1 < dim)
-    htitle = TString::Format("d^{%d}%s/", dim_cnt, diff_var_name.Data());
-  else if (DIM1 == dim)
-    htitle = TString::Format("d%s/", diff_var_name.Data());
-  else
-    htitle = TString::Format("%s", diff_var_name.Data());
+    if (DIM1 < dim)
+        htitle = TString::Format("d^{%d}%s/", dim_cnt, diff_var_name.Data());
+    else if (DIM1 == dim)
+        htitle = TString::Format("d%s/", diff_var_name.Data());
+    else
+        htitle = TString::Format("%s", diff_var_name.Data());
 
-  if (DIM1 <= dim) htitle += TString("d")+x.label.Data();
-  if (DIM2 <= dim) htitle += TString("d")+y.label.Data();
-  if (DIM3 == dim) htitle += TString("d")+z.label.Data();
+    if (DIM1 <= dim) htitle += TString("d") + x.label.Data();
+    if (DIM2 <= dim) htitle += TString("d") + y.label.Data();
+    if (DIM3 == dim) htitle += TString("d") + z.label.Data();
 
-	label = htitle;
-	unit = hunit;
+    label = htitle;
+    unit = hunit;
 
-  if (unit.Length())
-		axis_text = label + " [" + unit + "]";
-  else
-    axis_text = label;
+    if (unit.Length())
+        axis_text = label + " [" + unit + "]";
+    else
+        axis_text = label;
 }
 
-TString DistributionContext::format_hist_axes(const char * title) const {
-  if (DIM3 == dim)
-    return TString::Format("%s;%s%s%s;%s%s%s",
-                           title,
-                           x.label.Data(), x.format_unit().Data(),
-                           y.label.Data(), y.format_unit().Data(),
-                           z.label.Data(), z.format_unit().Data());
-  else if (DIM2 == dim)
-    return TString::Format("%s;%s%s;%s%s",
-                           title,
-                           x.label.Data(), x.format_unit().Data(),
-                           y.label.Data(), y.format_unit().Data());
-  else if (DIM1 == dim)
-    return TString::Format("%s;%s%s;Counts [aux]",
-                           title,
-                           x.label.Data(), x.format_unit().Data());
+TString DistributionContext::format_hist_axes(const char* title) const
+{
+    if (DIM3 == dim)
+        return TString::Format("%s;%s%s%s;%s%s%s", title, x.label.Data(), x.format_unit().Data(),
+                               y.label.Data(), y.format_unit().Data(), z.label.Data(),
+                               z.format_unit().Data());
+    else if (DIM2 == dim)
+        return TString::Format("%s;%s%s;%s%s", title, x.label.Data(), x.format_unit().Data(),
+                               y.label.Data(), y.format_unit().Data());
+    else if (DIM1 == dim)
+        return TString::Format("%s;%s%s;Counts [aux]", title, x.label.Data(),
+                               x.format_unit().Data());
 
-  else if (DIM0 == dim)
-    return TString::Format("%s;%s%s;Counts [aux]",
-                           title,
-                           x.label.Data(), x.format_unit().Data());
+    else if (DIM0 == dim)
+        return TString::Format("%s;%s%s;Counts [aux]", title, x.label.Data(),
+                               x.format_unit().Data());
 
-  return TString::Format("%s;;", title);
+    return TString::Format("%s;;", title);
 }
 
 void DistributionContext::print() const
 {
-  printf("Context: %s   Dimensions: %d\n", name.Data(), dim);
-  printf(" Name: %s   Hist name: %s   Dir Name: %s\n", name.Data(), hist_name.Data(), dir_name.Data());
-  printf(" Var name: %s\n", diff_var_name.Data());
-  x.print();
-  y.print();
-  z.print();
+    printf("Context: %s   Dimensions: %d\n", name.Data(), dim);
+    printf(" Name: %s   Hist name: %s   Dir Name: %s\n", name.Data(), hist_name.Data(),
+           dir_name.Data());
+    printf(" Var name: %s\n", diff_var_name.Data());
+    x.print();
+    y.print();
+    z.print();
 }

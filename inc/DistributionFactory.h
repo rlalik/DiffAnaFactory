@@ -19,18 +19,18 @@
 #ifndef DISTRIBUTIONFACTORY_H
 #define DISTRIBUTIONFACTORY_H
 
-#include "RootTools.h"
-
 #include "DistributionContext.h"
 #include "ExtraDimensionMapper.h"
-#include "FitterFactory.h"
-#include "SmartFactory.h"
+
+#include <FitterFactory.h>
+#include <Pandora.h>
+#include <RootTools.h>
 
 #ifdef HAVE_HISTASYMMERRORS
 #include "TH2DA.h"
 #endif
 
-class DistributionFactory : public TObject, public SmartFactory
+class DistributionFactory : public TObject, public RT::Pandora
 {
 public:
     DistributionFactory();
@@ -55,7 +55,7 @@ public:
     // 	void niceHists(float mt, float mr, float mb, float ml, int ndivx, int ndivy, float xls,
     // float xts, float xto, float yls, float yts, float yto, bool centerY = false, bool centerX =
     // false);
-    virtual void niceHists(RT::PadFormat pf, const RT::GraphFormat& format);
+    virtual void niceHists(RT::Hist::PadFormat pf, const RT::Hist::GraphFormat& format);
 
     virtual void prepareCanvas(const char* draw_opts = nullptr);
 

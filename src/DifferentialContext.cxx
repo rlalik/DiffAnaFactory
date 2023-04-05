@@ -19,170 +19,164 @@
 #include "DifferentialContext.h"
 #include <json/json.h>
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
-#define PR(x) std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
+#define PR(x)                                                                                      \
+    std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
 
 DifferentialContext::DifferentialContext()
 {
-	// basic
-	// x and y binning for full range
+    // basic
+    // x and y binning for full range
 
-	// cut range when useCut==kTRUE
-// 	cutMin = cutMax = 0;
+    // cut range when useCut==kTRUE
+    // 	cutMin = cutMax = 0;
 
-	// variables to use for diff analysis
-	var_weight = 0;
-	// variable used for cuts when cutCut==kTRUE
+    // variables to use for diff analysis
+    var_weight = 0;
+    // variable used for cuts when cutCut==kTRUE
 }
 
-DifferentialContext::DifferentialContext(const DifferentialContext & ctx) : DistributionContext(ctx)
+DifferentialContext::DifferentialContext(const DifferentialContext& ctx) : DistributionContext(ctx)
 {
-	*this = ctx;
-	name = ctx.name;
+    *this = ctx;
+    name = ctx.name;
 }
 
+DifferentialContext::~DifferentialContext() {}
 
-DifferentialContext::~DifferentialContext()
-{}
+extern bool jsonReadTStringKey(const Json::Value& jsondata, const char* key, TString& target);
+extern bool jsonReadIntKey(const Json::Value& jsondata, const char* key, int& target);
+extern bool jsonReadUIntKey(const Json::Value& jsondata, const char* key, uint& target);
+extern bool jsonReadFloatKey(const Json::Value& jsondata, const char* key, float& target);
+extern bool jsonReadDoubleKey(const Json::Value& jsondata, const char* key, double& target);
 
-extern bool jsonReadTStringKey(const Json::Value & jsondata, const char * key, TString & target);
-extern bool jsonReadIntKey(const Json::Value & jsondata, const char * key, int & target);
-extern bool jsonReadUIntKey(const Json::Value & jsondata, const char * key, uint & target);
-extern bool jsonReadFloatKey(const Json::Value & jsondata, const char * key, float & target);
-extern bool jsonReadDoubleKey(const Json::Value & jsondata, const char * key, double & target);
-
-bool DifferentialContext::configureFromJson(const char * name)
+bool DifferentialContext::configureFromJson(const char* name)
 {
-	std::ifstream ifs(json_fn.Data());
-	if (!ifs.is_open())
-		return false;
+    std::ifstream ifs(json_fn.Data());
+    if (!ifs.is_open()) return false;
 
-	std::cout << "  Found JSON config file for " << name << std::endl;
-	Json::Value ana, cfg, axis;
-	Json::Reader reader;
+    std::cout << "  Found JSON config file for " << name << std::endl;
+    Json::Value ana, cfg, axis;
+    Json::Reader reader;
 
-	bool parsing_success = reader.parse(ifs, ana);
+    bool parsing_success = reader.parse(ifs, ana);
 
-	if (!parsing_success)
-	{
-		std::cout << "  Parsing failed\n";
-		return false;
-	}
-	else
-		std::cout << "  Parsing successfull\n";
+    if (!parsing_success)
+    {
+        std::cout << "  Parsing failed\n";
+        return false;
+    }
+    else
+        std::cout << "  Parsing successfull\n";
 
-	if (!ana.isMember(name))
-	{
-		std::cout << "  No data for " << name << std::endl;
-		return false;
-	}
+    if (!ana.isMember(name))
+    {
+        std::cout << "  No data for " << name << std::endl;
+        return false;
+    }
 
-	cfg = ana[name];
+    cfg = ana[name];
 
-	const size_t axis_num = 3;
-	const char * axis_labels[axis_num] = { "x", "y", "V" };
-	AxisCfg * axis_ptrs[axis_num] = { &x, &y, &V };
+    const size_t axis_num = 3;
+    const char* axis_labels[axis_num] = {"x", "y", "V"};
+    AxisCfg* axis_ptrs[axis_num] = {&x, &y, &V};
 
-	for (uint i = 0; i < axis_num; ++i)
-	{
-		if (!cfg.isMember(axis_labels[i]))
-			continue;
-			
-		axis = cfg[axis_labels[i]];
+    for (uint i = 0; i < axis_num; ++i)
+    {
+        if (!cfg.isMember(axis_labels[i])) continue;
 
-// 		jsonReadTStringKey(axis, "title", axis_ptrs[i]->title);
-		jsonReadTStringKey(axis, "label", axis_ptrs[i]->label);
-		jsonReadTStringKey(axis, "unit", axis_ptrs[i]->unit);
-// 		jsonReadIntKey(axis, "bins", axis_ptrs[i]->bins);
-		jsonReadUIntKey(axis, "bins", axis_ptrs[i]->bins);
-		jsonReadDoubleKey(axis, "min", axis_ptrs[i]->min);
-		jsonReadDoubleKey(axis, "max", axis_ptrs[i]->max);
-	}
+        axis = cfg[axis_labels[i]];
 
-	ifs.close();
-	return true;
+        // 		jsonReadTStringKey(axis, "title", axis_ptrs[i]->title);
+        jsonReadTStringKey(axis, "label", axis_ptrs[i]->label);
+        jsonReadTStringKey(axis, "unit", axis_ptrs[i]->unit);
+        // 		jsonReadIntKey(axis, "bins", axis_ptrs[i]->bins);
+        jsonReadUIntKey(axis, "bins", axis_ptrs[i]->bins);
+        jsonReadDoubleKey(axis, "min", axis_ptrs[i]->min);
+        jsonReadDoubleKey(axis, "max", axis_ptrs[i]->max);
+    }
+
+    ifs.close();
+    return true;
 }
 
-bool DifferentialContext::configureToJson(const char * name, const char * jsonfile)
+bool DifferentialContext::configureToJson(const char* name, const char* jsonfile)
 {
-	(void)jsonfile;
+    (void)jsonfile;
 
-	Json::Value ana, cfg, axis;
+    Json::Value ana, cfg, axis;
 
-	cfg["title"]	= "d^{2}N/dp_{t}dy.{cm}";
+    cfg["title"] = "d^{2}N/dp_{t}dy.{cm}";
 
-	axis["bins"]	= 100;
-	axis["min"]		= 0;
-	axis["max"]		= 100;
-	axis["label"]	= "xlabel";
-	axis["var"]		= "y.{cm}";
+    axis["bins"] = 100;
+    axis["min"] = 0;
+    axis["max"] = 100;
+    axis["label"] = "xlabel";
+    axis["var"] = "y.{cm}";
 
-	cfg["x"] = axis;
+    cfg["x"] = axis;
 
-	axis["bins"]	= 100;
-	axis["min"]		= 0;
-	axis["max"]		= 100;
-	axis["label"]	= "ylabel";
-	axis["var"]		= "p_{t}";
+    axis["bins"] = 100;
+    axis["min"] = 0;
+    axis["max"] = 100;
+    axis["label"] = "ylabel";
+    axis["var"] = "p_{t}";
 
-	cfg["y"] = axis;
+    cfg["y"] = axis;
 
-	axis["bins"]	= 100;
-	axis["min"]		= 0;
-	axis["max"]		= 100;
-	axis["label"]	= "Vlabel";
-	axis["var"]		= "none";
+    axis["bins"] = 100;
+    axis["min"] = 0;
+    axis["max"] = 100;
+    axis["label"] = "Vlabel";
+    axis["var"] = "none";
 
-	cfg["V"] = axis;
+    cfg["V"] = axis;
 
-	ana[name] = cfg;
+    ana[name] = cfg;
 
-	std::cout << ana;
+    std::cout << ana;
 
-// 	Json::StyledWriter sw;
-// 	std::cout << sw.write(ana);
-	
-// 	Json::FastWriter fw;
-// 	std::cout << fw.write(ana);
+    // 	Json::StyledWriter sw;
+    // 	std::cout << sw.write(ana);
 
-	return true;
+    // 	Json::FastWriter fw;
+    // 	std::cout << fw.write(ana);
+
+    return true;
 }
 
-DifferentialContext & DifferentialContext::operator=(const DifferentialContext & ctx)
+DifferentialContext& DifferentialContext::operator=(const DifferentialContext& ctx)
 {
-  if (this == &ctx) return *this;
-// 	histPrefix = ctx.histPrefix;
-  DistributionContext::operator=(ctx);
-	name = ctx.name;
-	V = ctx.V;
+    if (this == &ctx) return *this;
+    // 	histPrefix = ctx.histPrefix;
+    DistributionContext::operator=(ctx);
+    name = ctx.name;
+    V = ctx.V;
 
-	return *this;
+    return *this;
 }
 
-bool DifferentialContext::operator==(const DifferentialContext & ctx)
+bool DifferentialContext::operator==(const DifferentialContext& ctx)
 {
-  bool res = (DistributionContext)*this == (DistributionContext)ctx;
-  if (!res) return false;
+    bool res = (DistributionContext) * this == (DistributionContext)ctx;
+    if (!res) return false;
 
-	if (this->V != ctx.V)
-	{
-		fprintf(stderr, "Different number of z bins: %d vs %d\n", this->V.bins, ctx.V.bins);
-		return false;
-	}
+    if (this->V != ctx.V)
+    {
+        fprintf(stderr, "Different number of z bins: %d vs %d\n", this->V.bins, ctx.V.bins);
+        return false;
+    }
 
-	return true;
+    return true;
 }
 
-bool DifferentialContext::operator!=(const DifferentialContext & ctx)
-{
-	return !operator==(ctx);
-}
+bool DifferentialContext::operator!=(const DifferentialContext& ctx) { return !operator==(ctx); }
 
 void DifferentialContext::print() const
 {
-  DistributionContext::print();
-  V.print();
-  printf(" label: %s  unit: %s\n", label.Data(), unit.Data());
+    DistributionContext::print();
+    V.print();
+    printf(" label: %s  unit: %s\n", label.Data(), unit.Data());
 }

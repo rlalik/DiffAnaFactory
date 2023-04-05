@@ -9,9 +9,7 @@ add_executable(UnitTester test_runner.cpp ${UnitTests_SRCS})
 target_link_libraries(UnitTester
     ROOT::Core ROOT::Gpad
     RT::RootTools
-    RT::SmartFactory
-    RT::FitterFactory
-    RT::MultiDimensionalFactory
+    RT::MultiDimensionalAnalyzer
 
     ${HISTASYMMERRORS_LIBRARIES}
     jsoncpp
