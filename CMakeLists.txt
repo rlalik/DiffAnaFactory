@@ -1,30 +1,29 @@
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+
+include(cmake/prelude.cmake)
+
 project(
-  MultiDimensionalAnalyzer
-  VERSION 0.2.0
-  LANGUAGES CXX)
+    Midas
+    VERSION 0.3.0
+    DESCRIPTION "Midas - a Mutli Dimensional Analysis framework."
+    HOMEPAGE_URL "https://github.com/rlalik/Midas"
+    LANGUAGES CXX
+)
 
-include(GNUInstallDirs)
+include(cmake/project-is-top-level.cmake)
+include(cmake/variables.cmake)
+include(cmake/find_or_fetch_package.cmake)
 
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_INSTALL_CMAKEDIR ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME})
+# find ROOT
+list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
+find_package(ROOT QUIET REQUIRED COMPONENTS Core Gpad Hist)
 
-# Depedencies
-include(FetchContent)
-
-# cmake_tools - tools to fetch external packages and build static/shared libs
-FetchContent_Declare(
-  cmake_tools
-  GIT_REPOSITORY https://github.com/rlalik/cmake_tools
-  GIT_TAG master)
-FetchContent_MakeAvailable(cmake_tools)
-list(APPEND CMAKE_MODULE_PATH ${cmake_tools_SOURCE_DIR})
-
-include(find_or_fetch_package)
+find_or_fetch_package(fmt https://github.com/fmtlib/fmt GIT_TAG 10.0.0 VERSION 10.0.0)
 
 # json parser
 set(JSONCPP_WITH_PKGCONFIG_SUPPORT OFF)
 set(JSONCPP_WITH_CMAKE_PACKAGE OFF)
+set(JSONCPP_WITH_TESTS OFF)
 
 # cmake-format: off
 find_or_fetch_package(jsoncpp
@@ -37,7 +36,7 @@ include_directories(/usr/include/jsoncpp/)
 
 find_package(RootTools REQUIRED)
 find_package(Pandora REQUIRED)
-find_package(FitterFactory REQUIRED)
+find_package(HelloFitty REQUIRED)
 
 # conditional modules
 option(ENABLE_ADVANCE_TOOLS "Enables advanced tools" OFF)
@@ -62,120 +61,134 @@ if(HistAsymmErrors_FOUND)
   add_definitions("-DHAVE_HISTASYMMERRORS=1")
 endif()
 
-# find ROOT
-list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
-find_package(
-  ROOT QUIET REQUIRED
-  COMPONENTS Core
-  OPTIONAL_COMPONENTS Cling Cint)
-
-# include_directories( ${HISTASYMMERRORS_INCLUDE_DIR} )
-
-# link_directories( ${HISTASYMMERRORS_LIBRARY_DIR} )
-
-include(shared_or_static)
+include(cmake/shared_or_static.cmake)
 shared_or_static(${PROJECT_NAME})
 
+# ---- Declare library ----
 add_library(
-  ${PROJECT_NAME}
-  ${${PROJECT_NAME}_LIBRARY_TYPE}
-  src/DistributionContext.cxx
-  src/DistributionFactory.cxx
-  src/DifferentialContext.cxx
-  src/DifferentialFactory.cxx
-  src/ExtraDimensionMapper.cxx
-  src/MultiDimAnalysisContext.cxx)
-add_library(RT::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+    Midas
+    ${Midas_LIBRARY_TYPE}
+    source/DistributionContext.cpp
+    source/DistributionFactory.cpp
+    source/DifferentialContext.cpp
+    source/DifferentialFactory.cpp
+    source/ExtraDimensionMapper.cpp
+    source/MultiDimAnalysisContext.cpp
+)
+add_library(Midas::Midas ALIAS Midas)
 
-target_include_directories(
-  ${PROJECT_NAME}
-  PUBLIC $<INSTALL_INTERFACE:include>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/inc)
+target_link_libraries(Midas PUBLIC ROOT::Core ROOT::Gpad PRIVATE RT::Pandora HelloFitty::HelloFitty jsoncpp)
 
-target_link_libraries(
-  ${PROJECT_NAME}
-  PUBLIC ROOT::Core
-  PRIVATE RT::Pandora RT::FitterFactory jsoncpp)
+# if (HelloFitty_FOUND)
+#   target_compile_definitions(Midas PRIVATE HELLOFITTY_FOUND)
+# endif()
 
-set_target_properties(
-  ${PROJECT_NAME}
-  PROPERTIES
-    SOVERSION ${PROJECT_VERSION_MAJOR}
-    VERSION ${PROJECT_VERSION}
-    PUBLIC_HEADER
-    "inc/DistributionContext.h;inc/DistributionFactory.h;inc/DifferentialContext.h;inc/DifferentialFactory.h;inc/ExtraDimensionMapper.h;inc/MultiDimDistributionContext.h"
+# configure_file(config.h.in midas_config.h)
+
+include(GenerateExportHeader)
+generate_export_header(
+    Midas
+    BASE_NAME Midas
+    EXPORT_FILE_NAME export/Midas/midas_export.hpp
+    CUSTOM_CONTENT_FROM_VARIABLE pragma_suppress_c4251
 )
 
-# cmake-format: off
-root_generate_dictionary(G__${PROJECT_NAME}_cc
-  inc/DistributionContext.h
-  inc/DistributionFactory.h
-  inc/DifferentialContext.h
-  inc/DifferentialFactory.h
-  inc/ExtraDimensionMapper.h
-  inc/MultiDimDistributionContext.h
-  MODULE ${PROJECT_NAME}
-  LINKDEF LinkDef.h)
-# cmake-format: on
+if(NOT BUILD_SHARED_LIBS)
+  target_compile_definitions(Midas PUBLIC MIDAS_STATIC_DEFINE)
+endif()
+
+set_target_properties(
+    Midas PROPERTIES
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN YES
+    VERSION "${PROJECT_VERSION}"
+    SOVERSION "${PROJECT_VERSION_MAJOR}"
+    EXPORT_NAME Midas
+    OUTPUT_NAME Midas
+)
+
+target_include_directories(
+  Midas ${warning_guard}
+  PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/inc>
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc
+)
+
+target_include_directories(
+    Midas SYSTEM
+    PUBLIC
+    "$<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/export>"
+    "$<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>"
+)
+
+option(BUILD_DICTIONARY "Build ROOT dictionary." OFF)
+if (BUILD_DICTIONARY)
+  # cmake-format: off
+  root_generate_dictionary(G__Midas_cc
+    DistributionContext.hpp
+    DistributionFactory.hpp
+    DifferentialContext.hpp
+    DifferentialFactory.hpp
+    ExtraDimensionMapper.hpp
+    MultiDimDistributionContext.hpp
+    MODULE Midas
+    LINKDEF inc/LinkDef.h)
+  # cmake-format: on
+endif()
+
+# target_compile_features(Midas PUBLIC cxx_std_11)
+
+# ---- Install rules ----
+
+if(NOT CMAKE_SKIP_INSTALL_RULES)
+  include(cmake/install-rules.cmake)
+endif()
+
+# ---- Examples ----
+
+if(PROJECT_IS_TOP_LEVEL)
+  option(BUILD_EXAMPLES "Build examples tree." "${Midas_DEVELOPER_MODE}")
+  if(BUILD_EXAMPLES)
+    add_subdirectory(example)
+  endif()
+endif()
+
+# ---- Developer mode ----
+
+if(NOT Midas_DEVELOPER_MODE)
+  return()
+elseif(NOT PROJECT_IS_TOP_LEVEL)
+  message(
+      AUTHOR_WARNING
+      "Developer mode is intended for developers of HelloFitty"
+  )
+endif()
+
+include(cmake/dev-mode.cmake)
 
 # Export the package for use from the build-tree (this registers the build-tree
 # with a global CMake-registry)
-export(PACKAGE ${PROJECT_NAME})
-
-# Install the export set for use with the install-tree
-install(
-  TARGETS ${PROJECT_NAME}
-  EXPORT ${PROJECT_NAME}Targets
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-
-install(
-  EXPORT ${PROJECT_NAME}Targets
-  FILE ${PROJECT_NAME}Targets.cmake
-  NAMESPACE RT::
-  DESTINATION ${CMAKE_INSTALL_CMAKEDIR}
-  COMPONENT dev)
-
-include(CMakePackageConfigHelpers)
-configure_package_config_file(
-  Config.cmake.in ${PROJECT_NAME}Config.cmake
-  INSTALL_DESTINATION ${CMAKE_INSTALL_CMAKEDIR}
-  PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR CMAKE_INSTALL_BINDIR)
-
-write_basic_package_version_file(
-  ${PROJECT_NAME}ConfigVersion.cmake
-  VERSION ${PROJECT_VERSION}
-  COMPATIBILITY SameMajorVersion)
-
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
-              ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
-        DESTINATION ${CMAKE_INSTALL_CMAKEDIR})
-
-add_subdirectory(examples)
-
-enable_testing()
-add_subdirectory(tests)
+export(PACKAGE Midas)
 
 # messages
 message(
   STATUS
     "<<< Configuration >>>
-Project:        ${CMAKE_PROJECT_NAME}
+Project:        ${PROJECT_NAME}
 
-Architecture:   ${CMAKE_LIBRARY_ARCHITECTURE}
+Architecture:   ${CMAKE_CXX_LIBRARY_ARCHITECTURE}
 Build type      ${CMAKE_BUILD_TYPE}
 Install path    ${CMAKE_INSTALL_PREFIX}
 
 Compiler:
-C               ${CMAKE_C_COMPILER}
 C++             ${CMAKE_CXX_COMPILER}
 
 Linker:
 Ld              ${CMAKE_LINKER}
 
 Compiler flags:
-C               ${CMAKE_C_FLAGS}
 C++             ${CMAKE_CXX_FLAGS}
 
 Linker flags:

@@ -1,7 +1,6 @@
 #include <cppunit/extensions/HelperMacros.h>
 
-#include "DifferentialFactory.h"
-#include "ExtraDimensionMapper.h"
+#include "midas.hpp"
 
 #include <TFile.h>
 
@@ -28,17 +27,17 @@ protected:
 
     int bins;
     float min, max;
-    DifferentialContext a2ctx;
-    DifferentialContext a3ctx;
-    DifferentialFactory* a2fac;
-    DifferentialFactory* a3fac;
+    midas::DifferentialContext a2ctx;
+    midas::DifferentialContext a3ctx;
+    midas::DifferentialFactory* a2fac;
+    midas::DifferentialFactory* a3fac;
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(AnaFacCase);
 
 void AnaFacCase::setUp()
 {
-    a3ctx.dim = DIM3;
+    a3ctx.dim = midas::DIM3;
     a3ctx.x.bins = 4;
     a3ctx.x.min = -10;
     a3ctx.x.max = 10;
@@ -62,7 +61,7 @@ void AnaFacCase::setUp()
 
     a2ctx = a3ctx;
 
-    a2ctx.dim = DIM2;
+    a2ctx.dim = midas::DIM2;
     a2ctx.name = "a2fac";
     a2ctx.hist_name = "a2fac";
 
@@ -80,12 +79,12 @@ void AnaFacCase::tearDown()
 
 void AnaFacCase::InitializationTest()
 {
-    ExtraDimensionMapper* edm;
+    midas::ExtraDimensionMapper* edm;
 
-    a2fac = new DifferentialFactory(a2ctx);
+    a2fac = new midas::DifferentialFactory(a2ctx);
     a2fac->init();
 
-    a3fac = new DifferentialFactory(a3ctx);
+    a3fac = new midas::DifferentialFactory(a3ctx);
     a3fac->init();
 
     edm = a2fac->diffs;
@@ -103,7 +102,7 @@ void AnaFacCase::InitializationTest()
 
 void AnaFacCase::ScaleTest()
 {
-    a3fac = new DifferentialFactory(a3ctx);
+    a3fac = new midas::DifferentialFactory(a3ctx);
     a3fac->init();
 
     TH1* h = (*a3fac->diffs)[0];
@@ -125,13 +124,13 @@ void AnaFacCase::ScaleTest()
 
 void AnaFacCase::FillTest()
 {
-    a2fac = new DifferentialFactory(a2ctx);
+    a2fac = new midas::DifferentialFactory(a2ctx);
     a2fac->init();
 
-    a3fac = new DifferentialFactory(a3ctx);
+    a3fac = new midas::DifferentialFactory(a3ctx);
     a3fac->init();
 
-    ExtraDimensionMapper* edm;
+    midas::ExtraDimensionMapper* edm;
 
     edm = a2fac->diffs;
 
@@ -148,13 +147,13 @@ void AnaFacCase::FillTest()
 
 void AnaFacCase::WriteTest()
 {
-    a2fac = new DifferentialFactory(a2ctx);
+    a2fac = new midas::DifferentialFactory(a2ctx);
     a2fac->init();
     CPPUNIT_ASSERT_EQUAL(true, 0 != a2fac->ctx.validate());
     CPPUNIT_ASSERT_EQUAL(true, a2fac->ctx.update());
     (*a2fac->diffs)[0]->FillRandom("gaus", 1000);
 
-    a3fac = new DifferentialFactory(a3ctx);
+    a3fac = new midas::DifferentialFactory(a3ctx);
     a3fac->init();
     CPPUNIT_ASSERT_EQUAL(true, 0 != a3fac->ctx.validate());
     CPPUNIT_ASSERT_EQUAL(true, a3fac->ctx.update());
@@ -180,18 +179,18 @@ void AnaFacCase::ReadTest()
         return;
     }
 
-    DifferentialContext* dactx = nullptr;
+    midas::DifferentialContext* dactx = nullptr;
 
     std::string tmpname = "a3fac";
     tmpname.append("Ctx");
     file->ls();
-    dactx = (DifferentialContext*)file->Get(tmpname.c_str());
+    dactx = (midas::DifferentialContext*)file->Get(tmpname.c_str());
 
     CPPUNIT_ASSERT_EQUAL(true, dactx != nullptr);
     dactx->print();
 
-    DifferentialFactory* fac = nullptr;
-    fac = new DifferentialFactory(dactx);
+    midas::DifferentialFactory* fac = nullptr;
+    fac = new midas::DifferentialFactory(dactx);
     fac->setSource(file);
     fac->init();
 

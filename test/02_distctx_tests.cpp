@@ -1,6 +1,6 @@
 #include <cppunit/extensions/HelperMacros.h>
 
-#include "DistributionContext.h"
+#include "midas.hpp"
 
 class DistCtxCase : public CPPUNIT_NS::TestFixture
 {
@@ -16,8 +16,8 @@ protected:
 
     int bins;
     float min, max;
-    AxisCfg axis;
-    DistributionContext d3ctx;
+    midas::AxisCfg axis;
+    midas::DistributionContext d3ctx;
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(DistCtxCase);
@@ -28,7 +28,7 @@ void DistCtxCase::setUp()
     min = 0;
     max = 10;
 
-    d3ctx.dim = DIM3;
+    d3ctx.dim = midas::DIM3;
     d3ctx.name = "test";
     d3ctx.x.label = "d2_x";
     d3ctx.x.unit = "mm";
@@ -46,7 +46,7 @@ void DistCtxCase::MyTest()
     output_string = d3ctx.z.format_unit();
     CPPUNIT_ASSERT_EQUAL(std::string(" [cm]"), output_string);
 
-    DistributionContext d3ctx_2 = d3ctx;
+    midas::DistributionContext d3ctx_2 = d3ctx;
 
     output_string = d3ctx_2.z.format_unit();
     CPPUNIT_ASSERT_EQUAL(std::string(" [cm]"), output_string);

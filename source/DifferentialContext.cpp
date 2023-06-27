@@ -16,14 +16,17 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "DifferentialContext.h"
+#include "midas.hpp"
+
 #include <json/json.h>
 
 #include <fstream>
 #include <iostream>
 
-#define PR(x)                                                                                      \
-    std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
+#define PR(x) std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
+
+namespace midas
+{
 
 DifferentialContext::DifferentialContext()
 {
@@ -180,3 +183,5 @@ void DifferentialContext::print() const
     V.print();
     printf(" label: %s  unit: %s\n", label.Data(), unit.Data());
 }
+
+}; // namespace midas

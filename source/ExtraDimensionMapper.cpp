@@ -16,7 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "ExtraDimensionMapper.h"
+#include "midas.hpp"
 
 #include <Pandora.h>
 
@@ -25,16 +25,18 @@
 #include <TSystem.h>
 #include <TVirtualArray.h>
 
-#define PR(x)                                                                                      \
-    std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
+#define PR(x) std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
 
 // const Option_t h1opts[] = "h,E1";
 
 // const TString flags_fit_a = "B,Q,0";
 // const TString flags_fit_b = "";
 
-ExtraDimensionMapper::ExtraDimensionMapper(Dimensions dim, const std::string& name, TH1* hist,
-                                           const AxisCfg& axis, const std::string& dir_and_name)
+namespace midas
+{
+
+ExtraDimensionMapper::ExtraDimensionMapper(Dimensions dim, const std::string& name, TH1* hist, const AxisCfg& axis,
+                                           const std::string& dir_and_name)
     : RT::Pandora(""), dim(dim), axis(axis), prefix_name(dir_and_name), ref_hist(hist)
 {
     nbins_x = hist->GetNbinsX();
@@ -54,9 +56,8 @@ ExtraDimensionMapper::ExtraDimensionMapper(Dimensions dim, const std::string& na
     // 	objectsFits->SetName(ctx.histPrefix + "Fits");
 }
 
-ExtraDimensionMapper::ExtraDimensionMapper(Dimensions dim, const std::string& name, TH1* hist,
-                                           const AxisCfg& axis, const std::string& dir_and_name,
-                                           RT::Pandora* sf)
+ExtraDimensionMapper::ExtraDimensionMapper(Dimensions dim, const std::string& name, TH1* hist, const AxisCfg& axis,
+                                           const std::string& dir_and_name, RT::Pandora* sf)
     : RT::Pandora(""), dim(dim), axis(axis), prefix_name(dir_and_name), ref_hist(hist)
 {
     nbins_x = hist->GetNbinsX();
@@ -144,8 +145,7 @@ void ExtraDimensionMapper::map1D(const AxisCfg& axis)
         }
         else
         {
-            histograms[getBin(i)] =
-                RegTH1<TH1D>(buff, axis.format_hist_string(buff), axis.bins, axis.min, axis.max);
+            histograms[getBin(i)] = RegTH1<TH1D>(buff, axis.format_hist_string(buff), axis.bins, axis.min, axis.max);
         }
     }
 
@@ -172,8 +172,8 @@ void ExtraDimensionMapper::map2D(const AxisCfg& axis)
             }
             else
             {
-                histograms[getBin(i, j)] = RegTH1<TH1D>(buff, axis.format_hist_string(buff),
-                                                        axis.bins, axis.min, axis.max);
+                histograms[getBin(i, j)] =
+                    RegTH1<TH1D>(buff, axis.format_hist_string(buff), axis.bins, axis.min, axis.max);
             }
         }
         formatCanvasName(buff, i);
@@ -201,8 +201,8 @@ void ExtraDimensionMapper::map3D(const AxisCfg& axis)
                 }
                 else
                 {
-                    histograms[getBin(i, j, k)] = RegTH1<TH1D>(buff, axis.format_hist_string(buff),
-                                                               axis.bins, axis.min, axis.max);
+                    histograms[getBin(i, j, k)] =
+                        RegTH1<TH1D>(buff, axis.format_hist_string(buff), axis.bins, axis.min, axis.max);
                 }
             }
             formatCanvasName(buff, i, j);
@@ -310,8 +310,7 @@ void ExtraDimensionMapper::Fill2D(Double_t x, Double_t y, Double_t v, Double_t w
     UInt_t bin = ref_hist->FindBin(x, y);
     Int_t bx, by, bz;
     ref_hist->GetBinXYZ(bin, bx, by, bz);
-    if (bx > 0 && bx <= (int)nbins_x && by > 0 && by <= (int)nbins_y)
-        histograms[getBin(bx - 1, by - 1)]->Fill(v, w);
+    if (bx > 0 && bx <= (int)nbins_x && by > 0 && by <= (int)nbins_y) histograms[getBin(bx - 1, by - 1)]->Fill(v, w);
 }
 
 void ExtraDimensionMapper::Fill3D(Double_t x, Double_t y, Double_t z, Double_t v, Double_t w)
@@ -319,7 +318,8 @@ void ExtraDimensionMapper::Fill3D(Double_t x, Double_t y, Double_t z, Double_t v
     UInt_t bin = ref_hist->FindBin(x, y, z);
     Int_t bx, by, bz;
     ref_hist->GetBinXYZ(bin, bx, by, bz);
-    if (bx > 0 && bx <= (int)nbins_x && by > 0 && by <= (int)nbins_y && bz > 0 &&
-        bz <= (int)nbins_z)
+    if (bx > 0 && bx <= (int)nbins_x && by > 0 && by <= (int)nbins_y && bz > 0 && bz <= (int)nbins_z)
         histograms[getBin(bx - 1, by - 1, bz - 1)]->Fill(v, w);
 }
+
+} // namespace midas

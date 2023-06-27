@@ -16,35 +16,37 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "DistributionFactory.h"
+#include "midas.hpp"
+
+#include <RootTools.h>
 
 #include <TCanvas.h>
+#include <TF1.h>
 #include <TH3.h>
 #include <TList.h>
 #include <TSystem.h>
 
-#define PR(x)                                                                                      \
-    std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
+#define PR(x) std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
 
 // const Option_t h1opts[] = "h,E1";
 
+namespace midas
+{
+
 DistributionFactory::DistributionFactory()
-    : RT::Pandora(""), ctx(DistributionContext()), hSignalCounter(nullptr), cSignalCounter(nullptr),
-      drawOpts("colz")
+    : RT::Pandora(""), ctx(DistributionContext()), hSignalCounter(nullptr), cSignalCounter(nullptr), drawOpts("colz")
 {
     prepare();
 }
 
 DistributionFactory::DistributionFactory(const DistributionContext& context)
-    : RT::Pandora(""), ctx(context), hSignalCounter(nullptr), cSignalCounter(nullptr),
-      drawOpts("colz")
+    : RT::Pandora(""), ctx(context), hSignalCounter(nullptr), cSignalCounter(nullptr), drawOpts("colz")
 {
     prepare();
 }
 
 DistributionFactory::DistributionFactory(const DistributionContext* context)
-    : RT::Pandora(""), ctx(*context), hSignalCounter(nullptr), cSignalCounter(nullptr),
-      drawOpts("colz")
+    : RT::Pandora(""), ctx(*context), hSignalCounter(nullptr), cSignalCounter(nullptr), drawOpts("colz")
 {
     prepare();
 }
@@ -88,22 +90,19 @@ void DistributionFactory::init()
     // input histograms
     if (DIM3 == ctx.dim && !hSignalCounter)
     {
-        hSignalCounter =
-            RegTH3<TH3D>("@@@d/h_@@@a", htitle, ctx.x.bins, ctx.x.min, ctx.x.max, ctx.y.bins,
-                         ctx.y.min, ctx.y.max, ctx.z.bins, ctx.z.min, ctx.z.max);
+        hSignalCounter = RegTH3<TH3D>("@@@d/h_@@@a", htitle, ctx.x.bins, ctx.x.min, ctx.x.max, ctx.y.bins, ctx.y.min,
+                                      ctx.y.max, ctx.z.bins, ctx.z.min, ctx.z.max);
         hSignalCounter->SetTitle(ctx.title);
     }
 
     if (DIM2 == ctx.dim && !hSignalCounter)
     {
 #ifdef HAVE_HISTASYMMERRORS
-        hSignalCounter =
-            RegTH2<TH2DA>("@@@d/h_@@@a", htitle,
+        hSignalCounter = RegTH2<TH2DA>("@@@d/h_@@@a", htitle,
 #else
-        hSignalCounter =
-            RegTH2<TH2D>("@@@d/h_@@@a", htitle,
+        hSignalCounter = RegTH2<TH2D>("@@@d/h_@@@a", htitle,
 #endif
-                          ctx.x.bins, ctx.x.min, ctx.x.max, ctx.y.bins, ctx.y.min, ctx.y.max);
+                                       ctx.x.bins, ctx.x.min, ctx.x.max, ctx.y.bins, ctx.y.min, ctx.y.max);
         hSignalCounter->SetTitle(ctx.title);
     }
 
@@ -149,8 +148,7 @@ void DistributionFactory::reinit()
 
 void DistributionFactory::proceed()
 {
-    if (DIM3 == ctx.dim)
-        ((TH3*)hSignalCounter)->Fill(*ctx.x.var, *ctx.y.var, *ctx.z.var, *ctx.var_weight);
+    if (DIM3 == ctx.dim) ((TH3*)hSignalCounter)->Fill(*ctx.x.var, *ctx.y.var, *ctx.z.var, *ctx.var_weight);
 
     if (DIM2 == ctx.dim) ((TH2*)hSignalCounter)->Fill(*ctx.x.var, *ctx.y.var, *ctx.var_weight);
 
@@ -184,8 +182,8 @@ void DistributionFactory::proceed()
 void DistributionFactory::binnorm()
 {
     if (hSignalCounter)
-        hSignalCounter->Scale(1.0 / (hSignalCounter->GetXaxis()->GetBinWidth(1) *
-                                     hSignalCounter->GetYaxis()->GetBinWidth(1)));
+        hSignalCounter->Scale(
+            1.0 / (hSignalCounter->GetXaxis()->GetBinWidth(1) * hSignalCounter->GetYaxis()->GetBinWidth(1)));
     //
     // 	// Signal with cut
     // 	if (ctx.useCuts())
@@ -223,13 +221,12 @@ void DistributionFactory::scale(Float_t factor)
 
 void DistributionFactory::finalize(const char* draw_opts) { prepareCanvas(draw_opts); }
 
-void DistributionFactory::niceHisto(TVirtualPad* pad, TH1* hist, float mt, float mr, float mb,
-                                    float ml, int ndivx, int ndivy, float xls, float xts, float xto,
-                                    float yls, float yts, float yto, bool centerY, bool centerX)
+void DistributionFactory::niceHisto(TVirtualPad* pad, TH1* hist, float mt, float mr, float mb, float ml, int ndivx,
+                                    int ndivy, float xls, float xts, float xto, float yls, float yts, float yto,
+                                    bool centerY, bool centerX)
 {
     RT::Hist::NicePad(pad, mt, mr, mb, ml);
-    RT::Hist::NiceHistogram(hist, ndivx, ndivy, xls, 0.005, xts, xto, yls, 0.005, yts, yto, centerY,
-                            centerX);
+    RT::Hist::NiceHistogram(hist, ndivx, ndivy, xls, 0.005, xts, xto, yls, 0.005, yts, yto, centerY, centerX);
 }
 
 void DistributionFactory::niceHists(RT::Hist::PadFormat pf, const RT::Hist::GraphFormat& format)
@@ -397,8 +394,7 @@ void DistributionFactory::applyAngDists(double a2, double a4, double corr_a2, do
         applyAngDists(hist_to_map[x], a2, a4, corr_a2, corr_a4);
 }
 
-void DistributionFactory::applyAngDists(TH1* h, double a2, double a4, double corr_a2,
-                                        double corr_a4)
+void DistributionFactory::applyAngDists(TH1* h, double a2, double a4, double corr_a2, double corr_a4)
 {
     TF1* f = new TF1("local_legpol", "angdist", -1, 1);
     f->SetParameter(0, 1.0);
@@ -493,3 +489,5 @@ bool copyHistogram(TH1* src, TH1* dst, bool with_functions)
 void DistributionFactory::rename(const char* newname) { Pandora::rename(newname); }
 
 void DistributionFactory::chdir(const char* newdir) { Pandora::chdir(newdir); }
+
+}; // namespace midas

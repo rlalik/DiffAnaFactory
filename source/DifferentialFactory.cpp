@@ -16,22 +16,29 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "TCanvas.h"
-#include "TLatex.h"
-#include "TList.h"
+#include "midas.hpp"
 
-#include "DifferentialFactory.h"
+#include <hellofitty.hpp>
 
-#define PR(x)                                                                                      \
-    std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
+#include <RootTools.h>
+
+#include <TCanvas.h>
+#include <TF1.h>
+#include <TH1.h>
+#include <TLatex.h>
+#include <TList.h>
+
+#define PR(x) std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
+
+namespace midas
+{
 
 const Option_t h1opts[] = "h,E1";
 
 const TString flags_fit_a = "B,Q,0";
 const TString flags_fit_b = "";
 
-DifferentialFactory::DifferentialFactory()
-    : DistributionFactory(), ctx(DifferentialContext()), diffs(nullptr)
+DifferentialFactory::DifferentialFactory() : DistributionFactory(), ctx(DifferentialContext()), diffs(nullptr)
 {
     DistributionFactory::prepare();
     DifferentialFactory::prepare();
@@ -90,8 +97,8 @@ void DifferentialFactory::init_diffs()
 {
     if (DIM0 == ctx.dim) return;
 
-    diffs = new ExtraDimensionMapper(ctx.dim, ctx.name.Data(), hSignalCounter, ctx.V,
-                                     "@@@d/diffs/%c_@@@a_Signal", this);
+    diffs =
+        new ExtraDimensionMapper(ctx.dim, ctx.name.Data(), hSignalCounter, ctx.V, "@@@d/diffs/%c_@@@a_Signal", this);
 }
 
 void DifferentialFactory::reinit()
@@ -166,15 +173,9 @@ void DifferentialFactory::proceed()
 
 void DifferentialFactory::proceed1() { diffs->Fill1D(*ctx.x.var, *ctx.V.var, *ctx.var_weight); }
 
-void DifferentialFactory::proceed2()
-{
-    diffs->Fill2D(*ctx.x.var, *ctx.y.var, *ctx.V.var, *ctx.var_weight);
-}
+void DifferentialFactory::proceed2() { diffs->Fill2D(*ctx.x.var, *ctx.y.var, *ctx.V.var, *ctx.var_weight); }
 
-void DifferentialFactory::proceed3()
-{
-    diffs->Fill3D(*ctx.x.var, *ctx.y.var, *ctx.z.var, *ctx.V.var, *ctx.var_weight);
-}
+void DifferentialFactory::proceed3() { diffs->Fill3D(*ctx.x.var, *ctx.y.var, *ctx.z.var, *ctx.V.var, *ctx.var_weight); }
 
 void DifferentialFactory::binnorm() { DistributionFactory::binnorm(); }
 
@@ -220,8 +221,7 @@ void DifferentialFactory::applyBinomErrors(TH1* N)
 
 bool DifferentialFactory::write(const char* filename, bool verbose)
 {
-    return DistributionFactory::write(filename, verbose) && diffs ? diffs->write(filename, verbose)
-                                                                  : true;
+    return DistributionFactory::write(filename, verbose) && diffs ? diffs->write(filename, verbose) : true;
 }
 
 bool DifferentialFactory::write(TFile* f, bool verbose)
@@ -229,9 +229,8 @@ bool DifferentialFactory::write(TFile* f, bool verbose)
     return DistributionFactory::write(f, verbose) && diffs ? diffs->write(f, verbose) : true;
 }
 
-void DifferentialFactory::niceDiffs(float mt, float mr, float mb, float ml, int ndivx, int ndivy,
-                                    float xls, float xts, float xto, float yls, float yts,
-                                    float yto, bool centerY, bool centerX)
+void DifferentialFactory::niceDiffs(float mt, float mr, float mb, float ml, int ndivx, int ndivy, float xls, float xts,
+                                    float xto, float yls, float yts, float yto, bool centerY, bool centerX)
 {
     if (diffs)
     {
@@ -243,15 +242,13 @@ void DifferentialFactory::niceDiffs(float mt, float mr, float mb, float ml, int 
             RT::Hist::NicePad(p, mt, mr, mb, ml);
 
             TH1* h = (*diffs)[i];
-            RT::Hist::NiceHistogram(h, ndivx, ndivy, xls, 0.005, xts, xto, yls, 0.005, yts, yto,
-                                    centerY, centerX);
+            RT::Hist::NiceHistogram(h, ndivx, ndivy, xls, 0.005, xts, xto, yls, 0.005, yts, yto, centerY, centerX);
         }
     }
 }
 
-void DifferentialFactory::niceSlices(float mt, float mr, float mb, float ml, int ndivx, int ndivy,
-                                     float xls, float xts, float xto, float yls, float yts,
-                                     float yto, bool centerY, bool centerX)
+void DifferentialFactory::niceSlices(float mt, float mr, float mb, float ml, int ndivx, int ndivy, float xls, float xts,
+                                     float xto, float yls, float yts, float yto, bool centerY, bool centerX)
 {
     // 	for (uint i = 0; i < ctx.cx.bins; ++i)
     // 	{
@@ -348,10 +345,8 @@ void DifferentialFactory::prepareDiffCanvas()
         Float_t centerpos = (1 - pad->GetRightMargin() + pad->GetLeftMargin()) / 2;
 
         latex->SetTextAlign(centeralign);
-        latex->DrawLatex(centerpos, 1.01,
-                         TString::Format("%.2f < %s < %.2f", X_l, ctx.x.label.Data(), X_h));
-        latex->DrawLatex(centerpos, 0.96,
-                         TString::Format("%.0f < %s < %.0f", Y_l, ctx.y.label.Data(), Y_h));
+        latex->DrawLatex(centerpos, 1.01, TString::Format("%.2f < %s < %.2f", X_l, ctx.x.label.Data(), X_h));
+        latex->DrawLatex(centerpos, 0.96, TString::Format("%.0f < %s < %.0f", Y_l, ctx.y.label.Data(), Y_h));
         latex->SetTextAlign(oldalign);
         latex->SetTextColor(/*36*/ 1);
 
@@ -359,20 +354,16 @@ void DifferentialFactory::prepareDiffCanvas()
         for (int i = 0; i < fitnpar; ++i)
         {
             latex->DrawLatex(0.5, 0.81 - 0.05 * i,
-                             TString::Format("[%d] %5g#pm%.2g", i, tfSig->GetParameter(i),
-                                             tfSig->GetParError(i)));
+                             TString::Format("[%d] %5g#pm%.2g", i, tfSig->GetParameter(i), tfSig->GetParError(i)));
         }
-        latex->DrawLatex(
-            0.5, 0.25,
-            TString::Format("#chi^{2}/ndf = %g", tfSum->GetChisquare() / tfSum->GetNDF()));
-        latex->DrawLatex(0.5, 0.20,
-                         TString::Format(" %.2g/%d", tfSum->GetChisquare(), tfSum->GetNDF()));
+        latex->DrawLatex(0.5, 0.25, TString::Format("#chi^{2}/ndf = %g", tfSum->GetChisquare() / tfSum->GetNDF()));
+        latex->DrawLatex(0.5, 0.20, TString::Format(" %.2g/%d", tfSum->GetChisquare(), tfSum->GetNDF()));
     }
     latex->Delete();
 }
 
-void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, FF::FitterFactory& ff,
-                                       FF::HistogramFit& stdfit, bool integral_only)
+void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, hf::fitter& hf, hf::fit_entry& stdfit,
+                                       bool integral_only)
 {
     if (DIM0 == ctx.dim) return;
 
@@ -421,7 +412,7 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, FF::FitterFa
 
                 if (!integral_only)
                 {
-                    auto hfp = ff.findFit(hfit);
+                    auto hfp = hf.find_fit(hfit);
 
                     bool cloned = false;
                     /*                    if (!hfp)
@@ -434,9 +425,8 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, FF::FitterFa
                     bool hasfunc = true;
 
                     if (((!hasfunc) or
-                         (hasfunc and
-                          !hfp->getFlagDisabled())) /*and*/ /*(hDiscreteXYDiff[i][j]->GetEntries()
-                                                          > 50)*/
+                         (hasfunc and !hfp->get_flag_disabled())) /*and*/ /*(hDiscreteXYDiff[i][j]->GetEntries()
+                                                                      > 50)*/
                         /* and (hDiscreteXYDiff[i][j]->GetRMS() < 15)*/)
                     {
                         if ((hfit->GetEntries() / hfit->GetRMS()) < 5)
@@ -444,7 +434,7 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, FF::FitterFa
                             // 						PR(( hDiscreteXYDiff[i][j]->GetEntries() /
                             // hDiscreteXYDiff[i][j]->GetRMS() ));
                             //						pad->SetFillColor(40);		// FIXME I dont want colors
-                            //in the putput
+                            // in the putput
                             info_text = 1;
                         }
                         else
@@ -474,7 +464,8 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, FF::FitterFa
                             // 						{
                             // 							hSliceXYFitQA[i]->SetBinContent(1+j,
                             // res.mean); 							hSliceXYFitQA[i]->SetBinError(1+j,
-                            // res.sigma); 							hSliceXYChi2NDF[i]->SetBinContent(1+j, res.chi2/res.ndf);
+                            // res.sigma); 							hSliceXYChi2NDF[i]->SetBinContent(1+j,
+                            // res.chi2/res.ndf);
                             // 						}
                         }
                     }
@@ -543,13 +534,13 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, FF::FitterFa
            sigfac->hSignalCounter->Integral(), ctx.hist_name.Data());
 }
 
-bool DifferentialFactory::fitDiffHist(TH1* hist, FF::HistogramFit* hfp, double min_entries)
+bool DifferentialFactory::fitDiffHist(TH1* hist, hf::fit_entry* hfp, double min_entries)
 {
-    Int_t bin_l = hist->FindBin(hfp->getFitRangeL());
-    Int_t bin_u = hist->FindBin(hfp->getFitRangeU());
+    Int_t bin_l = hist->FindBin(hfp->get_fit_range_min());
+    Int_t bin_u = hist->FindBin(hfp->get_fit_range_max());
 
     // rebin histogram if requested
-    if (hfp->getFlagRebin() != 0) hist->Rebin(hfp->getFlagRebin());
+    if (hfp->get_flag_rebin() != 0) hist->Rebin(hfp->get_flag_rebin());
 
     // if no data in requested range, nothing to do here
     if (hist->Integral(bin_l, bin_u) == 0) return false;
@@ -563,8 +554,8 @@ bool DifferentialFactory::fitDiffHist(TH1* hist, FF::HistogramFit* hfp, double m
     TF1* tfSig = nullptr;
 
     // do fit using FitterFactory
-    FF::FitterFactory ff;
-    bool res = ff.fit(hfp, hist, "B,Q", "");
+    hf::fitter hf;
+    bool res = hf.fit(hfp, hist, "B,Q", "");
 
     // if fit converged retrieve fit functions from histogram
     // otherwise nothing to do here
@@ -596,3 +587,5 @@ void DifferentialFactory::reset()
     DistributionFactory::reset();
     if (diffs) diffs->reset();
 }
+
+} // namespace midas

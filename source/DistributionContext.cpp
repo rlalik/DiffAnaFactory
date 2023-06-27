@@ -16,91 +16,21 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "DistributionContext.h"
+#include "midas.hpp"
 #include <json/json.h>
 
 #include <fstream>
 #include <iostream>
 #include <sys/stat.h>
 
-#define PR(x)                                                                                      \
-    std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
+#define PR(x) std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
 
-AxisCfg::AxisCfg() : bins(0), min(0), max(0), bins_arr(nullptr), delta(0.0), var(nullptr) {}
-
-AxisCfg::AxisCfg(const AxisCfg& a) { *this = a; }
-
-AxisCfg& AxisCfg::operator=(const AxisCfg& a)
+namespace midas
 {
-    if (this == &a) return *this;
 
-    label = a.label;
-    unit = a.unit;
+DistributionContext::DistributionContext() : TNamed(), dim(NOINIT), var_weight(nullptr), json_found(false) {}
 
-    bins = a.bins;
-    min = a.min;
-    max = a.max;
-    bins_arr = a.bins_arr;
-    delta = a.delta;
-    var = a.var;
-
-    return *this;
-}
-
-bool AxisCfg::operator==(const AxisCfg& ctx) { return (this->bins == ctx.bins); }
-
-bool AxisCfg::operator!=(const AxisCfg& ctx) { return (this->bins != ctx.bins); }
-
-TString AxisCfg::format_hist_string(const char* title, const char* ylabel) const
-{
-    return TString::Format("%s;%s;%s", title, format_string().Data(), ylabel);
-}
-
-TString AxisCfg::format_unit() const { return format_unit(unit); }
-
-TString AxisCfg::format_string() const
-{
-    return TString::Format("%s%s", label.Data(), format_unit().Data());
-}
-
-TString AxisCfg::format_unit(const char* unit) { return format_unit(TString(unit)); }
-
-TString AxisCfg::format_unit(const TString& unit)
-{
-    TString funit;
-    if (unit.Length()) funit = " [" + unit + "]";
-
-    return funit;
-}
-
-void AxisCfg::print() const
-{
-    if (!bins_arr)
-        printf(" Axis: %d bins in [ %f; %f ] range -- %s\n", bins, min, max,
-               format_string().Data());
-    else
-    {
-        TString buff;
-        for (uint i = 0; i < bins; ++i)
-        {
-            buff += "| ";
-            buff += bins_arr[i];
-            buff += " ";
-        }
-        buff += "|";
-        printf(" Axis: %d in %s -- %s\n", bins, buff.Data(), format_string().Data());
-    }
-}
-
-DistributionContext::DistributionContext()
-    : TNamed(), dim(NOINIT), var_weight(nullptr), json_found(false)
-{
-}
-
-DistributionContext::DistributionContext(Dimensions dim)
-    : TNamed(), dim(dim), var_weight(nullptr), json_found(false)
-{
-}
+DistributionContext::DistributionContext(Dimensions dim) : TNamed(), dim(dim), var_weight(nullptr), json_found(false) {}
 
 DistributionContext::DistributionContext(const DistributionContext& ctx) : TNamed()
 {
@@ -279,8 +209,7 @@ bool DistributionContext::configureToJson(const char* name, const char* jsonfile
     return true;
 }
 
-bool DistributionContext::findJsonFile(const char* initial_path, const char* filename,
-                                       int search_depth)
+bool DistributionContext::findJsonFile(const char* initial_path, const char* filename, int search_depth)
 {
     const size_t max_len = 1024 * 16;
     int depth_counter = 0;
@@ -419,19 +348,16 @@ void DistributionContext::format_diff_axis()
 TString DistributionContext::format_hist_axes(const char* title) const
 {
     if (DIM3 == dim)
-        return TString::Format("%s;%s%s%s;%s%s%s", title, x.label.Data(), x.format_unit().Data(),
-                               y.label.Data(), y.format_unit().Data(), z.label.Data(),
-                               z.format_unit().Data());
+        return TString::Format("%s;%s%s%s;%s%s%s", title, x.label.Data(), x.format_unit().Data(), y.label.Data(),
+                               y.format_unit().Data(), z.label.Data(), z.format_unit().Data());
     else if (DIM2 == dim)
-        return TString::Format("%s;%s%s;%s%s", title, x.label.Data(), x.format_unit().Data(),
-                               y.label.Data(), y.format_unit().Data());
+        return TString::Format("%s;%s%s;%s%s", title, x.label.Data(), x.format_unit().Data(), y.label.Data(),
+                               y.format_unit().Data());
     else if (DIM1 == dim)
-        return TString::Format("%s;%s%s;Counts [aux]", title, x.label.Data(),
-                               x.format_unit().Data());
+        return TString::Format("%s;%s%s;Counts [aux]", title, x.label.Data(), x.format_unit().Data());
 
     else if (DIM0 == dim)
-        return TString::Format("%s;%s%s;Counts [aux]", title, x.label.Data(),
-                               x.format_unit().Data());
+        return TString::Format("%s;%s%s;Counts [aux]", title, x.label.Data(), x.format_unit().Data());
 
     return TString::Format("%s;;", title);
 }
@@ -439,10 +365,11 @@ TString DistributionContext::format_hist_axes(const char* title) const
 void DistributionContext::print() const
 {
     printf("Context: %s   Dimensions: %d\n", name.Data(), dim);
-    printf(" Name: %s   Hist name: %s   Dir Name: %s\n", name.Data(), hist_name.Data(),
-           dir_name.Data());
+    printf(" Name: %s   Hist name: %s   Dir Name: %s\n", name.Data(), hist_name.Data(), dir_name.Data());
     printf(" Var name: %s\n", diff_var_name.Data());
     x.print();
     y.print();
     z.print();
 }
+
+}; // namespace midas

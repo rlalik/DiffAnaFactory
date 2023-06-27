@@ -7,10 +7,9 @@ link_directories(${CMAKE_CURRENT_BINARY_DIR}/lib)
 
 add_executable(UnitTester test_runner.cpp ${UnitTests_SRCS})
 target_link_libraries(UnitTester
-    ROOT::Core ROOT::Gpad
+    RT::Pandora
     RT::RootTools
-    RT::MultiDimensionalAnalyzer
-
+    Midas::Midas
     ${HISTASYMMERRORS_LIBRARIES}
     jsoncpp
     ${CPPUNIT_LIBRARIES}

@@ -1,6 +1,6 @@
 #include <cppunit/extensions/HelperMacros.h>
 
-#include "DifferentialContext.h"
+#include "midas.hpp"
 
 class AnaCtxCase : public CPPUNIT_NS::TestFixture
 {
@@ -16,8 +16,8 @@ protected:
 
     int bins;
     float min, max;
-    AxisCfg axis;
-    DifferentialContext a3ctx;
+    midas::AxisCfg axis;
+    midas::DifferentialContext a3ctx;
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(AnaCtxCase);
@@ -35,7 +35,7 @@ void AnaCtxCase::MyTest()
 {
     std::string output_string;
 
-    a3ctx.dim = DIM2;
+    a3ctx.dim = midas::DIM2;
     a3ctx.name = "test";
     a3ctx.x.bins = 10;
     a3ctx.x.label = "a2_x";
@@ -49,7 +49,7 @@ void AnaCtxCase::MyTest()
     output_string = a3ctx.label;
     CPPUNIT_ASSERT_EQUAL(std::string("d^{2}/da2_xda2_y"), output_string);
 
-    a3ctx.dim = DIM3;
+    a3ctx.dim = midas::DIM3;
     a3ctx.z.bins = 10;
     a3ctx.z.label = "a2_z";
     a3ctx.format_diff_axis();
@@ -57,7 +57,7 @@ void AnaCtxCase::MyTest()
     output_string = a3ctx.label;
     CPPUNIT_ASSERT_EQUAL(std::string("d^{3}/da2_xda2_yda2_z"), output_string);
 
-    DifferentialContext a3ctx_2 = a3ctx;
+    midas::DifferentialContext a3ctx_2 = a3ctx;
     a3ctx_2.format_diff_axis();
 
     output_string = a3ctx_2.label;

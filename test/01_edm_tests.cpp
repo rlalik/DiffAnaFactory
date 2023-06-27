@@ -1,6 +1,6 @@
 #include <cppunit/extensions/HelperMacros.h>
 
-#include <ExtraDimensionMapper.h>
+#include <midas.hpp>
 
 #include <TH2D.h>
 #include <TH3D.h>
@@ -24,8 +24,8 @@ protected:
 
     uint bins;
     float min, max;
-    AxisCfg axis;
-    ExtraDimensionMapper *edm1, *edm2, *edm3;
+    midas::AxisCfg axis;
+    midas::ExtraDimensionMapper *edm1, *edm2, *edm3;
     TH1D* h1;
     TH2D* h2;
     TH3D* h3;
@@ -46,9 +46,9 @@ void BasicCase::setUp()
     axis.min = -3;
     axis.max = 3;
 
-    edm1 = new ExtraDimensionMapper(DIM1, "edm1", h1, axis, "edm1");
-    edm2 = new ExtraDimensionMapper(DIM2, "edm2", h2, axis, "edm2");
-    edm3 = new ExtraDimensionMapper(DIM3, "edm3", h3, axis, "edm3");
+    edm1 = new midas::ExtraDimensionMapper(midas::DIM1, "edm1", h1, axis, "edm1");
+    edm2 = new midas::ExtraDimensionMapper(midas::DIM2, "edm2", h2, axis, "edm2");
+    edm3 = new midas::ExtraDimensionMapper(midas::DIM3, "edm3", h3, axis, "edm3");
 }
 
 void BasicCase::tearDown()
