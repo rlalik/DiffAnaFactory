@@ -27,8 +27,8 @@ protected:
 
     int bins;
     float min, max;
-    midas::DifferentialContext a2ctx;
-    midas::DifferentialContext a3ctx;
+    midas::v_context a2ctx;
+    midas::v_context a3ctx;
     midas::DifferentialFactory* a2fac;
     midas::DifferentialFactory* a3fac;
 };
@@ -38,26 +38,10 @@ CPPUNIT_TEST_SUITE_REGISTRATION(AnaFacCase);
 void AnaFacCase::setUp()
 {
     a3ctx.dim = midas::DIM3;
-    a3ctx.x.bins = 4;
-    a3ctx.x.min = -10;
-    a3ctx.x.max = 10;
-    a3ctx.x.label = "a3_x";
-    a3ctx.x.unit = "cm";
-    a3ctx.y.bins = 3;
-    a3ctx.y.min = -10;
-    a3ctx.y.max = 10;
-    a3ctx.y.label = "a3_y";
-    a3ctx.y.unit = "mm";
-    a3ctx.z.bins = 2;
-    a3ctx.z.min = -10;
-    a3ctx.z.max = 10;
-    a3ctx.z.label = "a3_z";
-    a3ctx.z.unit = "um";
-
-    a3ctx.V.bins = 100;
-    a3ctx.V.min = -10;
-    a3ctx.V.max = 10;
-    a3ctx.V.label = "a3_V";
+    a3ctx.x.set_bins(4, -10, 10).set_label("a3_x").set_unit("cm");
+    a3ctx.y.set_bins(3, -10, 10).set_label("a3_y").set_unit("mm");
+    a3ctx.z.set_bins(2, -10, 10).set_label("a3_z").set_unit("um");
+    a3ctx.V.set_bins(100, -10, 10).set_label("a3_V");
 
     a2ctx = a3ctx;
 
@@ -89,15 +73,15 @@ void AnaFacCase::InitializationTest()
 
     edm = a2fac->diffs;
 
-    CPPUNIT_ASSERT_EQUAL(a2ctx.x.bins, edm->getBinsX());
-    CPPUNIT_ASSERT_EQUAL(a2ctx.y.bins, edm->getBinsY());
-    //   CPPUNIT_ASSERT_EQUAL(a2ctx.z.bins, edm->getBinsZ());
+    CPPUNIT_ASSERT_EQUAL(a2ctx.x.get_bins(), edm->getBinsX());
+    CPPUNIT_ASSERT_EQUAL(a2ctx.y.get_bins(), edm->getBinsY());
+    //   CPPUNIT_ASSERT_EQUAL(a2ctx.z.get_bins(), edm->getBinsZ());
 
     edm = a3fac->diffs;
 
-    CPPUNIT_ASSERT_EQUAL(a3ctx.x.bins, edm->getBinsX());
-    CPPUNIT_ASSERT_EQUAL(a3ctx.y.bins, edm->getBinsY());
-    CPPUNIT_ASSERT_EQUAL(a3ctx.z.bins, edm->getBinsZ());
+    CPPUNIT_ASSERT_EQUAL(a3ctx.x.get_bins(), edm->getBinsX());
+    CPPUNIT_ASSERT_EQUAL(a3ctx.y.get_bins(), edm->getBinsY());
+    CPPUNIT_ASSERT_EQUAL(a3ctx.z.get_bins(), edm->getBinsZ());
 }
 
 void AnaFacCase::ScaleTest()
@@ -134,15 +118,15 @@ void AnaFacCase::FillTest()
 
     edm = a2fac->diffs;
 
-    CPPUNIT_ASSERT_EQUAL(a2ctx.x.bins, edm->getBinsX());
-    CPPUNIT_ASSERT_EQUAL(a2ctx.y.bins, edm->getBinsY());
-    //   CPPUNIT_ASSERT_EQUAL(a3ctx.z.bins, edm->getBinsZ());
+    CPPUNIT_ASSERT_EQUAL(a2ctx.x.get_bins(), edm->getBinsX());
+    CPPUNIT_ASSERT_EQUAL(a2ctx.y.get_bins(), edm->getBinsY());
+    //   CPPUNIT_ASSERT_EQUAL(a3ctx.z.get_bins(), edm->getBinsZ());
 
     edm = a3fac->diffs;
 
-    CPPUNIT_ASSERT_EQUAL(a3ctx.x.bins, edm->getBinsX());
-    CPPUNIT_ASSERT_EQUAL(a3ctx.y.bins, edm->getBinsY());
-    CPPUNIT_ASSERT_EQUAL(a3ctx.z.bins, edm->getBinsZ());
+    CPPUNIT_ASSERT_EQUAL(a3ctx.x.get_bins(), edm->getBinsX());
+    CPPUNIT_ASSERT_EQUAL(a3ctx.y.get_bins(), edm->getBinsY());
+    CPPUNIT_ASSERT_EQUAL(a3ctx.z.get_bins(), edm->getBinsZ());
 }
 
 void AnaFacCase::WriteTest()
@@ -179,12 +163,12 @@ void AnaFacCase::ReadTest()
         return;
     }
 
-    midas::DifferentialContext* dactx = nullptr;
+    midas::v_context* dactx = nullptr;
 
     std::string tmpname = "a3fac";
     tmpname.append("Ctx");
     file->ls();
-    dactx = (midas::DifferentialContext*)file->Get(tmpname.c_str());
+    dactx = (midas::v_context*)file->Get(tmpname.c_str());
 
     CPPUNIT_ASSERT_EQUAL(true, dactx != nullptr);
     dactx->print();

@@ -38,20 +38,20 @@ const Option_t h1opts[] = "h,E1";
 const TString flags_fit_a = "B,Q,0";
 const TString flags_fit_b = "";
 
-DifferentialFactory::DifferentialFactory() : DistributionFactory(), ctx(DifferentialContext()), diffs(nullptr)
+DifferentialFactory::DifferentialFactory() : DistributionFactory(), ctx(v_context()), diffs(nullptr)
 {
     DistributionFactory::prepare();
     DifferentialFactory::prepare();
 }
 
-DifferentialFactory::DifferentialFactory(const DifferentialContext& context)
+DifferentialFactory::DifferentialFactory(const v_context& context)
     : DistributionFactory(context), ctx(context), diffs(nullptr)
 {
     DistributionFactory::prepare();
     DifferentialFactory::prepare();
 }
 
-DifferentialFactory::DifferentialFactory(const DifferentialContext* context)
+DifferentialFactory::DifferentialFactory(const v_context* context)
     : DistributionFactory(context), ctx(*context), diffs(nullptr)
 {
     DistributionFactory::prepare();
@@ -103,7 +103,7 @@ void DifferentialFactory::init_diffs()
 
 void DifferentialFactory::reinit()
 {
-    DistributionFactory::ctx = (DistributionContext)ctx;
+    DistributionFactory::ctx = (context)ctx;
     DistributionFactory::reinit();
 
     if (diffs)
@@ -164,18 +164,24 @@ void DifferentialFactory::proceed()
 {
     DistributionFactory::proceed();
     if (DIM3 == ctx.dim)
-        diffs->Fill3D(*ctx.x.var, *ctx.y.var, *ctx.z.var, *ctx.V.var, *ctx.var_weight);
+        diffs->Fill3D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.z.get_var(), *ctx.V.get_var(), *ctx.var_weight);
     else if (DIM2 == ctx.dim)
-        diffs->Fill2D(*ctx.x.var, *ctx.y.var, *ctx.V.var, *ctx.var_weight);
+        diffs->Fill2D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.V.get_var(), *ctx.var_weight);
     else if (DIM1 == ctx.dim)
-        diffs->Fill1D(*ctx.x.var, *ctx.V.var, *ctx.var_weight);
+        diffs->Fill1D(*ctx.x.get_var(), *ctx.V.get_var(), *ctx.var_weight);
 }
 
-void DifferentialFactory::proceed1() { diffs->Fill1D(*ctx.x.var, *ctx.V.var, *ctx.var_weight); }
+void DifferentialFactory::proceed1() { diffs->Fill1D(*ctx.x.get_var(), *ctx.V.get_var(), *ctx.var_weight); }
 
-void DifferentialFactory::proceed2() { diffs->Fill2D(*ctx.x.var, *ctx.y.var, *ctx.V.var, *ctx.var_weight); }
+void DifferentialFactory::proceed2()
+{
+    diffs->Fill2D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.V.get_var(), *ctx.var_weight);
+}
 
-void DifferentialFactory::proceed3() { diffs->Fill3D(*ctx.x.var, *ctx.y.var, *ctx.z.var, *ctx.V.var, *ctx.var_weight); }
+void DifferentialFactory::proceed3()
+{
+    diffs->Fill3D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.z.get_var(), *ctx.V.get_var(), *ctx.var_weight);
+}
 
 void DifferentialFactory::binnorm() { DistributionFactory::binnorm(); }
 
@@ -306,10 +312,10 @@ void DifferentialFactory::prepareDiffCanvas()
             continue;
         }
 
-        Float_t Y_l = ctx.y.min + ctx.y.delta * by;
-        Float_t Y_h = ctx.y.min + ctx.y.delta * (by + 1);
-        Float_t X_l = ctx.x.min + ctx.x.delta * bx;
-        Float_t X_h = ctx.x.min + ctx.x.delta * (bx + 1);
+        Float_t Y_l = ctx.y.get_min() + ctx.y.get_delta() * by;
+        Float_t Y_h = ctx.y.get_min() + ctx.y.get_delta() * (by + 1);
+        Float_t X_l = ctx.x.get_min() + ctx.x.get_delta() * bx;
+        Float_t X_h = ctx.x.get_min() + ctx.x.get_delta() * (bx + 1);
 
         TF1* tfSum = (TF1*)flist->At(0);
         TF1* tfSig = (TF1*)flist->At(1);
@@ -345,8 +351,8 @@ void DifferentialFactory::prepareDiffCanvas()
         Float_t centerpos = (1 - pad->GetRightMargin() + pad->GetLeftMargin()) / 2;
 
         latex->SetTextAlign(centeralign);
-        latex->DrawLatex(centerpos, 1.01, TString::Format("%.2f < %s < %.2f", X_l, ctx.x.label.Data(), X_h));
-        latex->DrawLatex(centerpos, 0.96, TString::Format("%.0f < %s < %.0f", Y_l, ctx.y.label.Data(), Y_h));
+        latex->DrawLatex(centerpos, 1.01, TString::Format("%.2f < %s < %.2f", X_l, ctx.x.get_label().Data(), X_h));
+        latex->DrawLatex(centerpos, 0.96, TString::Format("%.0f < %s < %.0f", Y_l, ctx.y.get_label().Data(), Y_h));
         latex->SetTextAlign(oldalign);
         latex->SetTextColor(/*36*/ 1);
 

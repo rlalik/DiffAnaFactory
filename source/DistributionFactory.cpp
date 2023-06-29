@@ -34,18 +34,18 @@ namespace midas
 {
 
 DistributionFactory::DistributionFactory()
-    : RT::Pandora(""), ctx(DistributionContext()), hSignalCounter(nullptr), cSignalCounter(nullptr), drawOpts("colz")
+    : RT::Pandora(""), ctx(context()), hSignalCounter(nullptr), cSignalCounter(nullptr), drawOpts("colz")
 {
     prepare();
 }
 
-DistributionFactory::DistributionFactory(const DistributionContext& context)
+DistributionFactory::DistributionFactory(const context& context)
     : RT::Pandora(""), ctx(context), hSignalCounter(nullptr), cSignalCounter(nullptr), drawOpts("colz")
 {
     prepare();
 }
 
-DistributionFactory::DistributionFactory(const DistributionContext* context)
+DistributionFactory::DistributionFactory(const context* context)
     : RT::Pandora(""), ctx(*context), hSignalCounter(nullptr), cSignalCounter(nullptr), drawOpts("colz")
 {
     prepare();
@@ -90,8 +90,9 @@ void DistributionFactory::init()
     // input histograms
     if (DIM3 == ctx.dim && !hSignalCounter)
     {
-        hSignalCounter = RegTH3<TH3D>("@@@d/h_@@@a", htitle, ctx.x.bins, ctx.x.min, ctx.x.max, ctx.y.bins, ctx.y.min,
-                                      ctx.y.max, ctx.z.bins, ctx.z.min, ctx.z.max);
+        hSignalCounter =
+            RegTH3<TH3D>("@@@d/h_@@@a", htitle, ctx.x.get_bins(), ctx.x.get_min(), ctx.x.get_max(), ctx.y.get_bins(),
+                         ctx.y.get_min(), ctx.y.get_max(), ctx.z.get_bins(), ctx.z.get_min(), ctx.z.get_max());
         hSignalCounter->SetTitle(ctx.title);
     }
 
@@ -102,19 +103,20 @@ void DistributionFactory::init()
 #else
         hSignalCounter = RegTH2<TH2D>("@@@d/h_@@@a", htitle,
 #endif
-                                       ctx.x.bins, ctx.x.min, ctx.x.max, ctx.y.bins, ctx.y.min, ctx.y.max);
+                                       ctx.x.get_bins(), ctx.x.get_min(), ctx.x.get_max(), ctx.y.get_bins(),
+                                       ctx.y.get_min(), ctx.y.get_max());
         hSignalCounter->SetTitle(ctx.title);
     }
 
     if (DIM1 == ctx.dim && !hSignalCounter)
     {
-        hSignalCounter = RegTH1<TH1D>("@@@d/h_@@@a", htitle, ctx.x.bins, ctx.x.min, ctx.x.max);
+        hSignalCounter = RegTH1<TH1D>("@@@d/h_@@@a", htitle, ctx.x.get_bins(), ctx.x.get_min(), ctx.x.get_max());
         hSignalCounter->SetTitle(ctx.title);
     }
 
     if (DIM0 == ctx.dim && !hSignalCounter)
     {
-        hSignalCounter = RegTH1<TH1D>("@@@d/h_@@@a", htitle, ctx.x.bins, ctx.x.min, ctx.x.max);
+        hSignalCounter = RegTH1<TH1D>("@@@d/h_@@@a", htitle, ctx.x.get_bins(), ctx.x.get_min(), ctx.x.get_max());
         hSignalCounter->SetTitle(ctx.title);
     }
 
@@ -148,33 +150,34 @@ void DistributionFactory::reinit()
 
 void DistributionFactory::proceed()
 {
-    if (DIM3 == ctx.dim) ((TH3*)hSignalCounter)->Fill(*ctx.x.var, *ctx.y.var, *ctx.z.var, *ctx.var_weight);
+    if (DIM3 == ctx.dim)
+        ((TH3*)hSignalCounter)->Fill(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.z.get_var(), *ctx.var_weight);
 
-    if (DIM2 == ctx.dim) ((TH2*)hSignalCounter)->Fill(*ctx.x.var, *ctx.y.var, *ctx.var_weight);
+    if (DIM2 == ctx.dim) ((TH2*)hSignalCounter)->Fill(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.var_weight);
 
-    if (DIM1 == ctx.dim) ((TH1*)hSignalCounter)->Fill(*ctx.x.var, *ctx.var_weight);
+    if (DIM1 == ctx.dim) ((TH1*)hSignalCounter)->Fill(*ctx.x.get_var(), *ctx.var_weight);
 
-    if (DIM0 == ctx.dim) ((TH1*)hSignalCounter)->Fill(*ctx.x.var, *ctx.var_weight);
+    if (DIM0 == ctx.dim) ((TH1*)hSignalCounter)->Fill(*ctx.x.get_var(), *ctx.var_weight);
 
     // 	if (ctx.useClip() and
-    // 			*ctx.x.var > ctx.cx.min and *ctx.x.var < ctx.cx.max and
-    // 			*ctx.y.var > ctx.cy.min and *ctx.y.var < ctx.cy.max)
+    // 			*ctx.x.get_var() > ctx.cx.min and *ctx.x.get_var() < ctx.cx.max and
+    // 			*ctx.y.get_var() > ctx.cy.min and *ctx.y.get_var() < ctx.cy.max)
     // 	{
-    // 		const Int_t xcbin = Int_t( (*ctx.x.var - ctx.cx.min)/ctx.cx.delta );
-    // 		const Int_t ycbin = Int_t( (*ctx.y.var - ctx.cy.min)/ctx.cy.delta );
+    // 		const Int_t xcbin = Int_t( (*ctx.x.get_var() - ctx.cx.min)/ctx.cx.delta );
+    // 		const Int_t ycbin = Int_t( (*ctx.y.get_var() - ctx.cy.min)/ctx.cy.delta );
     //
-    // 		hDiscreteXYDiff[xcbin][ycbin]->Fill(*ctx.V.var, *ctx.var_weight);
+    // 		hDiscreteXYDiff[xcbin][ycbin]->Fill(*ctx.V.get_var(), *ctx.var_weight);
     //
     // 		isInRange = kTRUE;
     // 	}
 
-    // 	if (ctx.useCuts() and *ctx.V.var > ctx.cutMin and *ctx.V.var < ctx.cutMax)
+    // 	if (ctx.useCuts() and *ctx.V.get_var() > ctx.cutMin and *ctx.V.get_var() < ctx.cutMax)
     // 	{
-    // 		hSignalWithCutsXY->Fill(*ctx.x.var, *ctx.y.var, *ctx.var_weight);
+    // 		hSignalWithCutsXY->Fill(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.var_weight);
     //
     // 		if (isInRange)
     // 		{
-    // 			hDiscreteXY->Fill(*ctx.x.var, *ctx.y.var, *ctx.var_weight);
+    // 			hDiscreteXY->Fill(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.var_weight);
     // 		}
     // 	}
 }

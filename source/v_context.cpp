@@ -28,7 +28,7 @@
 namespace midas
 {
 
-DifferentialContext::DifferentialContext()
+v_context::v_context()
 {
     // basic
     // x and y binning for full range
@@ -41,13 +41,13 @@ DifferentialContext::DifferentialContext()
     // variable used for cuts when cutCut==kTRUE
 }
 
-DifferentialContext::DifferentialContext(const DifferentialContext& ctx) : DistributionContext(ctx)
+v_context::v_context(const v_context& ctx) : context(ctx)
 {
     *this = ctx;
     name = ctx.name;
 }
 
-DifferentialContext::~DifferentialContext() {}
+v_context::~v_context() {}
 
 extern bool jsonReadTStringKey(const Json::Value& jsondata, const char* key, TString& target);
 extern bool jsonReadIntKey(const Json::Value& jsondata, const char* key, int& target);
@@ -55,7 +55,7 @@ extern bool jsonReadUIntKey(const Json::Value& jsondata, const char* key, uint& 
 extern bool jsonReadFloatKey(const Json::Value& jsondata, const char* key, float& target);
 extern bool jsonReadDoubleKey(const Json::Value& jsondata, const char* key, double& target);
 
-bool DifferentialContext::configureFromJson(const char* name)
+bool v_context::configureFromJson(const char* name)
 {
     std::ifstream ifs(json_fn.Data());
     if (!ifs.is_open()) return false;
@@ -84,7 +84,7 @@ bool DifferentialContext::configureFromJson(const char* name)
 
     const size_t axis_num = 3;
     const char* axis_labels[axis_num] = {"x", "y", "V"};
-    AxisCfg* axis_ptrs[axis_num] = {&x, &y, &V};
+    axis_config* axis_ptrs[axis_num] = {&x, &y, &V};
 
     for (uint i = 0; i < axis_num; ++i)
     {
@@ -92,20 +92,25 @@ bool DifferentialContext::configureFromJson(const char* name)
 
         axis = cfg[axis_labels[i]];
 
-        // 		jsonReadTStringKey(axis, "title", axis_ptrs[i]->title);
-        jsonReadTStringKey(axis, "label", axis_ptrs[i]->label);
-        jsonReadTStringKey(axis, "unit", axis_ptrs[i]->unit);
         // 		jsonReadIntKey(axis, "bins", axis_ptrs[i]->bins);
-        jsonReadUIntKey(axis, "bins", axis_ptrs[i]->bins);
-        jsonReadDoubleKey(axis, "min", axis_ptrs[i]->min);
-        jsonReadDoubleKey(axis, "max", axis_ptrs[i]->max);
+        UInt_t bins;
+        jsonReadUIntKey(axis, "bins", bins);
+        Float_t min, max;
+        jsonReadFloatKey(axis, "min", min);
+        jsonReadFloatKey(axis, "max", max);
+        // 		jsonReadTStringKey(axis, "title", axis_ptrs[i]->title);
+        TString label, unit;
+        jsonReadTStringKey(axis, "label", label);
+        jsonReadTStringKey(axis, "unit", unit);
+
+        axis_ptrs[i]->set_bins(bins, min, max).set_label(label).set_unit(unit);
     }
 
     ifs.close();
     return true;
 }
 
-bool DifferentialContext::configureToJson(const char* name, const char* jsonfile)
+bool v_context::configureToJson(const char* name, const char* jsonfile)
 {
     (void)jsonfile;
 
@@ -150,36 +155,36 @@ bool DifferentialContext::configureToJson(const char* name, const char* jsonfile
     return true;
 }
 
-DifferentialContext& DifferentialContext::operator=(const DifferentialContext& ctx)
+v_context& v_context::operator=(const v_context& ctx)
 {
     if (this == &ctx) return *this;
     // 	histPrefix = ctx.histPrefix;
-    DistributionContext::operator=(ctx);
+    context::operator=(ctx);
     name = ctx.name;
     V = ctx.V;
 
     return *this;
 }
 
-bool DifferentialContext::operator==(const DifferentialContext& ctx)
+bool v_context::operator==(const v_context& ctx)
 {
-    bool res = (DistributionContext) * this == (DistributionContext)ctx;
+    bool res = (context) * this == (context)ctx;
     if (!res) return false;
 
     if (this->V != ctx.V)
     {
-        fprintf(stderr, "Different number of z bins: %d vs %d\n", this->V.bins, ctx.V.bins);
+        // fprintf(stderr, "Different number of z bins: %d vs %d\n", this->V.bins, ctx.V.bins); FIXME
         return false;
     }
 
     return true;
 }
 
-bool DifferentialContext::operator!=(const DifferentialContext& ctx) { return !operator==(ctx); }
+bool v_context::operator!=(const v_context& ctx) { return !operator==(ctx); }
 
-void DifferentialContext::print() const
+void v_context::print() const
 {
-    DistributionContext::print();
+    context::print();
     V.print();
     printf(" label: %s  unit: %s\n", label.Data(), unit.Data());
 }

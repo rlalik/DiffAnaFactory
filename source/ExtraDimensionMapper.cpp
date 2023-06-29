@@ -35,7 +35,7 @@
 namespace midas
 {
 
-ExtraDimensionMapper::ExtraDimensionMapper(Dimensions dim, const std::string& name, TH1* hist, const AxisCfg& axis,
+ExtraDimensionMapper::ExtraDimensionMapper(dimension dim, const std::string& name, TH1* hist, const axis_config& axis,
                                            const std::string& dir_and_name)
     : RT::Pandora(""), dim(dim), axis(axis), prefix_name(dir_and_name), ref_hist(hist)
 {
@@ -56,7 +56,7 @@ ExtraDimensionMapper::ExtraDimensionMapper(Dimensions dim, const std::string& na
     // 	objectsFits->SetName(ctx.histPrefix + "Fits");
 }
 
-ExtraDimensionMapper::ExtraDimensionMapper(Dimensions dim, const std::string& name, TH1* hist, const AxisCfg& axis,
+ExtraDimensionMapper::ExtraDimensionMapper(dimension dim, const std::string& name, TH1* hist, const axis_config& axis,
                                            const std::string& dir_and_name, RT::Pandora* sf)
     : RT::Pandora(""), dim(dim), axis(axis), prefix_name(dir_and_name), ref_hist(hist)
 {
@@ -132,20 +132,21 @@ bool ExtraDimensionMapper::reverseBin(UInt_t bin, UInt_t& x, UInt_t& y, UInt_t& 
     return true;
 }
 
-void ExtraDimensionMapper::map1D(const AxisCfg& axis)
+void ExtraDimensionMapper::map1D(const axis_config& axis)
 {
     char buff[1024];
     for (UInt_t i = 0; i < nbins_x; ++i)
     {
         formatName(buff, i);
-        if (axis.bins_arr)
+        if (axis.get_bins_array())
         {
             std::cerr << "Histogram bins arrays are not supported yet." << std::endl;
             std::abort();
         }
         else
         {
-            histograms[getBin(i)] = RegTH1<TH1D>(buff, axis.format_hist_string(buff), axis.bins, axis.min, axis.max);
+            histograms[getBin(i)] =
+                RegTH1<TH1D>(buff, axis.format_hist_string(buff), axis.get_bins(), axis.get_min(), axis.get_max());
         }
     }
 
@@ -155,7 +156,7 @@ void ExtraDimensionMapper::map1D(const AxisCfg& axis)
     canvases[0]->DivideSquare(nbins_x);
 }
 
-void ExtraDimensionMapper::map2D(const AxisCfg& axis)
+void ExtraDimensionMapper::map2D(const axis_config& axis)
 {
     canvases = new TCanvas*[nbins_x];
 
@@ -165,7 +166,7 @@ void ExtraDimensionMapper::map2D(const AxisCfg& axis)
         for (UInt_t j = 0; j < nbins_y; ++j)
         {
             formatName(buff, i, j);
-            if (axis.bins_arr)
+            if (axis.get_bins_array())
             {
                 std::cerr << "Histogram bins arrays are not supported yet." << std::endl;
                 std::abort();
@@ -173,7 +174,7 @@ void ExtraDimensionMapper::map2D(const AxisCfg& axis)
             else
             {
                 histograms[getBin(i, j)] =
-                    RegTH1<TH1D>(buff, axis.format_hist_string(buff), axis.bins, axis.min, axis.max);
+                    RegTH1<TH1D>(buff, axis.format_hist_string(buff), axis.get_bins(), axis.get_min(), axis.get_max());
             }
         }
         formatCanvasName(buff, i);
@@ -182,7 +183,7 @@ void ExtraDimensionMapper::map2D(const AxisCfg& axis)
     }
 }
 
-void ExtraDimensionMapper::map3D(const AxisCfg& axis)
+void ExtraDimensionMapper::map3D(const axis_config& axis)
 {
     canvases = new TCanvas*[nbins_x * nbins_y];
 
@@ -194,15 +195,15 @@ void ExtraDimensionMapper::map3D(const AxisCfg& axis)
             for (UInt_t k = 0; k < nbins_z; ++k)
             {
                 formatName(buff, i, j, k);
-                if (axis.bins_arr)
+                if (axis.get_bins_array())
                 {
                     std::cerr << "Histogram bins arrays are not supported yet." << std::endl;
                     std::abort();
                 }
                 else
                 {
-                    histograms[getBin(i, j, k)] =
-                        RegTH1<TH1D>(buff, axis.format_hist_string(buff), axis.bins, axis.min, axis.max);
+                    histograms[getBin(i, j, k)] = RegTH1<TH1D>(buff, axis.format_hist_string(buff), axis.get_bins(),
+                                                               axis.get_min(), axis.get_max());
                 }
             }
             formatCanvasName(buff, i, j);
@@ -297,7 +298,7 @@ TH1D* ExtraDimensionMapper::find(Double_t x, Double_t y, Double_t z)
     return histograms[getBin(bx - 1, by - 1, bz - 1)];
 }
 
-void ExtraDimensionMapper::Fill1D(Double_t x, Double_t v, Double_t w)
+void ExtraDimensionMapper::Fill1D(Float_t x, Float_t v, Float_t w)
 {
     UInt_t bin = ref_hist->FindBin(x);
     Int_t bx, by, bz;
@@ -305,7 +306,7 @@ void ExtraDimensionMapper::Fill1D(Double_t x, Double_t v, Double_t w)
     if (bx > 0 && bx <= (int)nbins_x) histograms[getBin(bx - 1)]->Fill(v, w);
 }
 
-void ExtraDimensionMapper::Fill2D(Double_t x, Double_t y, Double_t v, Double_t w)
+void ExtraDimensionMapper::Fill2D(Float_t x, Float_t y, Float_t v, Float_t w)
 {
     UInt_t bin = ref_hist->FindBin(x, y);
     Int_t bx, by, bz;
@@ -313,7 +314,7 @@ void ExtraDimensionMapper::Fill2D(Double_t x, Double_t y, Double_t v, Double_t w
     if (bx > 0 && bx <= (int)nbins_x && by > 0 && by <= (int)nbins_y) histograms[getBin(bx - 1, by - 1)]->Fill(v, w);
 }
 
-void ExtraDimensionMapper::Fill3D(Double_t x, Double_t y, Double_t z, Double_t v, Double_t w)
+void ExtraDimensionMapper::Fill3D(Float_t x, Float_t y, Float_t z, Float_t v, Float_t w)
 {
     UInt_t bin = ref_hist->FindBin(x, y, z);
     Int_t bx, by, bz;

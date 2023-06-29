@@ -28,22 +28,18 @@
 namespace midas
 {
 
-DistributionContext::DistributionContext() : TNamed(), dim(NOINIT), var_weight(nullptr), json_found(false) {}
+context::context() : TNamed(), dim(NOINIT), var_weight(nullptr), json_found(false) {}
 
-DistributionContext::DistributionContext(Dimensions dim) : TNamed(), dim(dim), var_weight(nullptr), json_found(false) {}
+context::context(dimension dim) : TNamed(), dim(dim), var_weight(nullptr), json_found(false) {}
 
-DistributionContext::DistributionContext(const DistributionContext& ctx) : TNamed()
+context::context(const context& ctx) : TNamed()
 {
     *this = ctx;
     name = ctx.name;
 }
 
-bool DistributionContext::update()
+bool context::update()
 {
-    x.delta = ((x.max - x.min) / x.bins);
-    y.delta = ((y.max - y.min) / y.bins);
-    z.delta = ((z.max - z.min) / z.bins);
-
     if (0 == hist_name.Length()) hist_name = name;
 
     if (0 == dir_name.Length()) dir_name = hist_name;
@@ -58,19 +54,19 @@ bool DistributionContext::update()
     return true;
 }
 
-int DistributionContext::validate() const
+int context::validate() const
 {
     if (0 == name.Length()) return 1;
-    if (DIM0 <= dim && x.bins and !x.var) return 11;
-    if (DIM1 <= dim && x.bins and !x.var) return 11;
-    if (DIM2 <= dim && y.bins and !y.var) return 12;
-    if (DIM3 == dim && z.bins and !z.var) return 13;
+    if (DIM0 <= dim && x.get_bins() and !x.get_var()) return 11;
+    if (DIM1 <= dim && x.get_bins() and !x.get_var()) return 11;
+    if (DIM2 <= dim && y.get_bins() and !y.get_var()) return 12;
+    if (DIM3 == dim && z.get_bins() and !z.get_var()) return 13;
 
     return 0;
     // 	return update();
 }
 
-DistributionContext::~DistributionContext() {}
+context::~context() {}
 
 bool jsonReadTStringKey(const Json::Value& jsondata, const char* key, TString& target)
 {
@@ -127,7 +123,7 @@ bool jsonReadDoubleKey(const Json::Value& jsondata, const char* key, double& tar
     return false;
 }
 
-bool DistributionContext::configureFromJson(const char* name)
+bool context::configureFromJson(const char* name)
 {
     std::ifstream ifs(json_fn.Data());
     if (!ifs.is_open()) return false;
@@ -156,7 +152,7 @@ bool DistributionContext::configureFromJson(const char* name)
 
     const size_t axis_num = 3;
     const char* axis_labels[axis_num] = {"x", "y", "z"};
-    AxisCfg* axis_ptrs[axis_num] = {&x, &y, &z};
+    axis_config* axis_ptrs[axis_num] = {&x, &y, &z};
 
     for (uint i = 0; i < axis_num; ++i)
     {
@@ -164,20 +160,25 @@ bool DistributionContext::configureFromJson(const char* name)
 
         axis = cfg[axis_labels[i]];
 
-        // 		jsonReadTStringKey(axis, "title", axis_ptrs[i]->title);
-        jsonReadTStringKey(axis, "label", axis_ptrs[i]->label);
-        jsonReadTStringKey(axis, "unit", axis_ptrs[i]->unit);
         // 		jsonReadIntKey(axis, "bins", axis_ptrs[i]->bins);
-        jsonReadUIntKey(axis, "bins", axis_ptrs[i]->bins);
-        jsonReadDoubleKey(axis, "min", axis_ptrs[i]->min);
-        jsonReadDoubleKey(axis, "max", axis_ptrs[i]->max);
+        UInt_t bins;
+        jsonReadUIntKey(axis, "bins", bins);
+        Float_t min, max;
+        jsonReadFloatKey(axis, "min", min);
+        jsonReadFloatKey(axis, "max", max);
+        // 		jsonReadTStringKey(axis, "title", axis_ptrs[i]->title);
+        TString label, unit;
+        jsonReadTStringKey(axis, "label", label);
+        jsonReadTStringKey(axis, "unit", unit);
+
+        axis_ptrs[i]->set_bins(bins, min, max).set_label(label).set_unit(unit);
     }
 
     ifs.close();
     return true;
 }
 
-bool DistributionContext::configureToJson(const char* name, const char* jsonfile)
+bool context::configureToJson(const char* name, const char* jsonfile)
 {
     (void)jsonfile;
 
@@ -209,7 +210,7 @@ bool DistributionContext::configureToJson(const char* name, const char* jsonfile
     return true;
 }
 
-bool DistributionContext::findJsonFile(const char* initial_path, const char* filename, int search_depth)
+bool context::findJsonFile(const char* initial_path, const char* filename, int search_depth)
 {
     const size_t max_len = 1024 * 16;
     int depth_counter = 0;
@@ -253,7 +254,7 @@ bool DistributionContext::findJsonFile(const char* initial_path, const char* fil
     return json_found;
 }
 
-DistributionContext& DistributionContext::operator=(const DistributionContext& ctx)
+context& context::operator=(const context& ctx)
 {
     if (this == &ctx) return *this;
 
@@ -277,7 +278,7 @@ DistributionContext& DistributionContext::operator=(const DistributionContext& c
     return *this;
 }
 
-bool DistributionContext::operator==(const DistributionContext& ctx)
+bool context::operator==(const context& ctx)
 {
     if (this == &ctx) return true;
 
@@ -289,34 +290,34 @@ bool DistributionContext::operator==(const DistributionContext& ctx)
 
     if (this->x != ctx.x)
     {
-        fprintf(stderr, "Different number of x bins: %d vs %d\n", this->x.bins, ctx.x.bins);
+        fprintf(stderr, "Different number of x bins: %d vs %d\n", this->x.get_bins(), ctx.x.get_bins());
         return false;
     }
 
     if (this->y != ctx.y)
     {
-        fprintf(stderr, "Different number of y bins: %d vs %d\n", this->y.bins, ctx.y.bins);
+        fprintf(stderr, "Different number of y bins: %d vs %d\n", this->y.get_bins(), ctx.y.get_bins());
         return false;
     }
 
     if (this->z != ctx.z)
     {
-        fprintf(stderr, "Different number of z bins: %d vs %d\n", this->z.bins, ctx.z.bins);
+        fprintf(stderr, "Different number of z bins: %d vs %d\n", this->z.get_bins(), ctx.z.get_bins());
         return false;
     }
 
     return true;
 }
 
-bool DistributionContext::operator!=(const DistributionContext& ctx) { return !operator==(ctx); }
+bool context::operator!=(const context& ctx) { return !operator==(ctx); }
 
-void DistributionContext::format_diff_axis()
+void context::format_diff_axis()
 {
     TString hunit = "1/";
-    if (DIM0 <= dim) hunit += x.unit.Data();
-    if (DIM1 <= dim) hunit += x.unit.Data();
-    if (DIM2 <= dim) hunit += y.unit.Data();
-    if (DIM3 == dim) hunit += z.unit.Data();
+    if (DIM0 <= dim) hunit += x.get_unit().Data();
+    if (DIM1 <= dim) hunit += x.get_unit().Data();
+    if (DIM2 <= dim) hunit += y.get_unit().Data();
+    if (DIM3 == dim) hunit += z.get_unit().Data();
 
     UInt_t dim_cnt = 0;
     TString htitle;
@@ -332,9 +333,9 @@ void DistributionContext::format_diff_axis()
     else
         htitle = TString::Format("%s", diff_var_name.Data());
 
-    if (DIM1 <= dim) htitle += TString("d") + x.label.Data();
-    if (DIM2 <= dim) htitle += TString("d") + y.label.Data();
-    if (DIM3 == dim) htitle += TString("d") + z.label.Data();
+    if (DIM1 <= dim) htitle += TString("d") + x.get_label().Data();
+    if (DIM2 <= dim) htitle += TString("d") + y.get_label().Data();
+    if (DIM3 == dim) htitle += TString("d") + z.get_label().Data();
 
     label = htitle;
     unit = hunit;
@@ -345,24 +346,25 @@ void DistributionContext::format_diff_axis()
         axis_text = label;
 }
 
-TString DistributionContext::format_hist_axes(const char* title) const
+TString context::format_hist_axes(const char* title) const
 {
     if (DIM3 == dim)
-        return TString::Format("%s;%s%s%s;%s%s%s", title, x.label.Data(), x.format_unit().Data(), y.label.Data(),
-                               y.format_unit().Data(), z.label.Data(), z.format_unit().Data());
+        return TString::Format("%s;%s%s%s;%s%s%s", title, x.get_label().Data(), x.format_unit().Data(),
+                               y.get_label().Data(), y.format_unit().Data(), z.get_label().Data(),
+                               z.format_unit().Data());
     else if (DIM2 == dim)
-        return TString::Format("%s;%s%s;%s%s", title, x.label.Data(), x.format_unit().Data(), y.label.Data(),
-                               y.format_unit().Data());
+        return TString::Format("%s;%s%s;%s%s", title, x.get_label().Data(), x.format_unit().Data(),
+                               y.get_label().Data(), y.format_unit().Data());
     else if (DIM1 == dim)
-        return TString::Format("%s;%s%s;Counts [aux]", title, x.label.Data(), x.format_unit().Data());
+        return TString::Format("%s;%s%s;Counts [aux]", title, x.get_label().Data(), x.format_unit().Data());
 
     else if (DIM0 == dim)
-        return TString::Format("%s;%s%s;Counts [aux]", title, x.label.Data(), x.format_unit().Data());
+        return TString::Format("%s;%s%s;Counts [aux]", title, x.get_label().Data(), x.format_unit().Data());
 
     return TString::Format("%s;;", title);
 }
 
-void DistributionContext::print() const
+void context::print() const
 {
     printf("Context: %s   Dimensions: %d\n", name.Data(), dim);
     printf(" Name: %s   Hist name: %s   Dir Name: %s\n", name.Data(), hist_name.Data(), dir_name.Data());

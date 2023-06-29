@@ -68,9 +68,10 @@ shared_or_static(${PROJECT_NAME})
 add_library(
     Midas
     ${Midas_LIBRARY_TYPE}
-    source/DistributionContext.cpp
+    source/axis_config.cpp
+    source/context.cpp
+    source/v_context.cpp
     source/DistributionFactory.cpp
-    source/DifferentialContext.cpp
     source/DifferentialFactory.cpp
     source/ExtraDimensionMapper.cpp
     source/MultiDimAnalysisContext.cpp

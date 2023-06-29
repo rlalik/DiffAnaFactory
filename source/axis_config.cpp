@@ -21,45 +21,27 @@
 namespace midas
 {
 
-AxisCfg::AxisCfg() : bins(0), min(0), max(0), bins_arr(nullptr), delta(0.0), var(nullptr) {}
+axis_config::axis_config() : var(nullptr), bins(0), min(0), max(0), bins_arr(nullptr), delta(0.0) {}
 
-AxisCfg::AxisCfg(const AxisCfg& a) { *this = a; }
+auto axis_config::operator==(const axis_config& ctx) -> bool { return (this->bins == ctx.bins); }
 
-AxisCfg::~AxisCfg() noexcept {}
+auto axis_config::operator!=(const axis_config& ctx) -> bool { return (this->bins != ctx.bins); }
 
-AxisCfg& AxisCfg::operator=(const AxisCfg& a)
-{
-    if (this == &a) return *this;
-
-    label = a.label;
-    unit = a.unit;
-
-    bins = a.bins;
-    min = a.min;
-    max = a.max;
-    bins_arr = a.bins_arr;
-    delta = a.delta;
-    var = a.var;
-
-    return *this;
-}
-
-bool AxisCfg::operator==(const AxisCfg& ctx) { return (this->bins == ctx.bins); }
-
-bool AxisCfg::operator!=(const AxisCfg& ctx) { return (this->bins != ctx.bins); }
-
-TString AxisCfg::format_hist_string(const char* title, const char* ylabel) const
+auto axis_config::format_hist_string(const char* title, const char* ylabel) const -> TString
 {
     return TString::Format("%s;%s;%s", title, format_string().Data(), ylabel);
 }
 
-TString AxisCfg::format_unit() const { return format_unit(unit); }
+auto axis_config::format_unit() const -> TString { return format_unit(unit); }
 
-TString AxisCfg::format_string() const { return TString::Format("%s%s", label.Data(), format_unit().Data()); }
+auto axis_config::format_string() const -> TString
+{
+    return TString::Format("%s%s", label.Data(), format_unit().Data());
+}
 
-TString AxisCfg::format_unit(const char* unit) { return format_unit(TString(unit)); }
+auto axis_config::format_unit(const char* unit) -> TString { return format_unit(TString(unit)); }
 
-TString AxisCfg::format_unit(const TString& unit)
+auto axis_config::format_unit(const TString& unit) -> TString
 {
     TString funit;
     if (unit.Length()) funit = " [" + unit + "]";
@@ -67,7 +49,7 @@ TString AxisCfg::format_unit(const TString& unit)
     return funit;
 }
 
-void AxisCfg::print() const
+auto axis_config::print() const -> void
 {
     if (!bins_arr)
         printf(" Axis: %d bins in [ %f; %f ] range -- %s\n", bins, min, max, format_string().Data());

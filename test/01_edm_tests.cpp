@@ -24,7 +24,7 @@ protected:
 
     uint bins;
     float min, max;
-    midas::AxisCfg axis;
+    midas::axis_config axis;
     midas::ExtraDimensionMapper *edm1, *edm2, *edm3;
     TH1D* h1;
     TH2D* h2;
@@ -42,9 +42,7 @@ void BasicCase::setUp()
     h2 = new TH2D("h2", "h2", bins, min, max, bins, min, max);
     h3 = new TH3D("h3", "h3", bins, min, max, bins, min, max, bins, min, max);
 
-    axis.bins = 20;
-    axis.min = -3;
-    axis.max = 3;
+    axis.set_bins(20, -3, 3);
 
     edm1 = new midas::ExtraDimensionMapper(midas::DIM1, "edm1", h1, axis, "edm1");
     edm2 = new midas::ExtraDimensionMapper(midas::DIM2, "edm2", h2, axis, "edm2");

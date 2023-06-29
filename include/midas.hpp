@@ -43,7 +43,82 @@ class fitter;
 namespace midas
 {
 
-enum Dimensions
+class MIDAS_EXPORT axis_config final
+{
+public:
+    axis_config();
+    axis_config(Float_t* var) : var(var) {}
+
+    auto operator==(const axis_config& ctx) -> bool;
+    auto operator!=(const axis_config& ctx) -> bool;
+
+    auto set_variable(Float_t* var) -> axis_config&
+    {
+        this->var = var;
+        return *this;
+    }
+    auto set_bins(UInt_t bins, Float_t min, Float_t max) -> axis_config&
+    {
+        this->bins = bins;
+        this->min = min;
+        this->max = max;
+        this->bins_arr = nullptr;
+        this->delta = (max - min) / bins;
+        return *this;
+    }
+    auto set_bins(Float_t* bins) -> axis_config&
+    {
+        this->bins = 0;
+        this->min = 0.0;
+        this->max = 0.0;
+        this->bins_arr = bins;
+        this->delta = 0.0;
+        return *this;
+    }
+    auto set_label(TString label) -> axis_config&
+    {
+        this->label = std::move(label);
+        return *this;
+    }
+    auto set_unit(TString unit) -> axis_config&
+    {
+        this->unit = std::move(unit);
+        return *this;
+    }
+
+    auto get_var() const -> const Float_t* { return var; }
+    auto get_bins() const -> UInt_t { return bins; }
+    auto get_min() const -> Float_t { return min; }
+    auto get_max() const -> Float_t { return max; }
+    auto get_delta() const -> Float_t { return delta; }
+    auto get_bins_array() const -> const Float_t* { return bins_arr; }
+    auto get_label() const -> const TString& { return label; }
+    auto get_unit() const -> const TString& { return unit; }
+
+    auto format_unit() const -> TString;
+    auto format_string() const -> TString;
+    auto format_hist_string(const char* title = nullptr, const char* ylabel = "Counts") const -> TString;
+
+    static auto format_unit(const char* unit) -> TString;
+    static auto format_unit(const TString& unit) -> TString;
+
+    auto print() const -> void;
+
+private:
+    TString label; // label for the axis
+    TString unit;  // unit for the axis
+    // TString title;     // title for the axis
+    Float_t* var;      //!	here is the address of the variable which is used to fill data
+    UInt_t bins;       // number of bins
+    Float_t min;       // minimum axis value
+    Float_t max;       // maximum axis value
+    Float_t* bins_arr; //! here one can put custom bins division array
+    Float_t delta;     // CAUTION: overriden by validate(), do not set by hand
+
+    // ClassDef(axis_config, 1);
+};
+
+enum dimension
 {
     NOINIT,
     DIM0,
@@ -52,45 +127,10 @@ enum Dimensions
     DIM3
 };
 
-class MIDAS_EXPORT AxisCfg final
-{
-    // class AxisCfg : public TObject {
-public:
-    AxisCfg();
-    AxisCfg(const AxisCfg& a);
-    AxisCfg& operator=(const AxisCfg& a);
-    bool operator==(const AxisCfg& ctx);
-    bool operator!=(const AxisCfg& ctx);
-
-    ~AxisCfg() noexcept;
-
-    TString label; // label for the axis
-    TString unit;  // unit for the axis
-                   // 	TString title;			// title for the axis
-
-    UInt_t bins;            // number of bins
-    Double_t min;           // minimum axis value
-    Double_t max;           // maximum axis value
-    Double_t* bins_arr;     //! here one can put custom bins division array
-    mutable Double_t delta; // CAUTION: overriden by validate(), do not set by hand
-    Float_t* var;           //!	here is the address of the variable which is used to fill data
-
-    TString format_unit() const;
-    TString format_string() const;
-    TString format_hist_string(const char* title = nullptr, const char* ylabel = "Counts") const;
-
-    static TString format_unit(const char* unit);
-    static TString format_unit(const TString& unit);
-
-    void print() const;
-
-    // ClassDef(AxisCfg, 1);
-};
-
-class MIDAS_EXPORT DistributionContext : public TNamed
+class MIDAS_EXPORT context : public TNamed
 {
 public:
-    Dimensions dim; // define dimension
+    dimension dim; // define dimension
     // config
     mutable TString name; // prefix for histograms
     TString dir_name;
@@ -102,7 +142,7 @@ public:
     TString unit;
     TString axis_text;
 
-    AxisCfg x, y, z; // x, y are two dimensions, V is a final Variable axis
+    axis_config x, y, z; // x, y are two dimensions, V is a final Variable axis
 
     // cut range when useCut==kTRUE
     // 	Double_t cutMin;			// Cut: min
@@ -112,14 +152,14 @@ public:
     Float_t* var_weight; //!
     // variable used for cuts when cutCut==kTRUE
 
-    DistributionContext();
-    DistributionContext(Dimensions dim);
-    DistributionContext(const DistributionContext& ctx);
-    virtual ~DistributionContext();
+    context();
+    context(dimension dim);
+    context(const context& ctx);
+    virtual ~context();
 
-    DistributionContext& operator=(const DistributionContext& ctx);
-    bool operator==(const DistributionContext& ctx);
-    bool operator!=(const DistributionContext& ctx);
+    context& operator=(const context& ctx);
+    bool operator==(const context& ctx);
+    bool operator!=(const context& ctx);
 
     virtual bool update();
     virtual int validate() const;
@@ -139,15 +179,41 @@ protected:
     TString json_fn;
     bool json_found;
 
-    // ClassDef(DistributionContext, 1);
+    // ClassDef(distribution_context, 1);
+};
+
+class MIDAS_EXPORT v_context : public context
+{
+public:
+    axis_config V; // x, y are two dimensions, V is a final Variable axis
+
+    v_context();
+    v_context(const v_context& ctx);
+    virtual ~v_context();
+
+    v_context& operator=(const v_context& ctx);
+    bool operator==(const v_context& ctx);
+    bool operator!=(const v_context& ctx);
+
+    // flags
+    // 	virtual bool useCuts() const { return (cutMin or cutMax); }
+
+    virtual bool configureFromJson(const char* name);
+    virtual bool configureToJson(const char* name, const char* jsonfile);
+
+    void print() const;
+
+private:
+    TString json_fn;
+    // ClassDef(DifferentialContext, 2);
 };
 
 class MIDAS_EXPORT DistributionFactory : public TObject, public RT::Pandora
 {
 public:
     DistributionFactory();
-    DistributionFactory(const DistributionContext& ctx);
-    DistributionFactory(const DistributionContext* ctx);
+    DistributionFactory(const context& ctx);
+    DistributionFactory(const context* ctx);
     virtual ~DistributionFactory();
 
     DistributionFactory& operator=(const DistributionFactory& fa);
@@ -185,7 +251,7 @@ protected:
     virtual void chdir(const char* newdir);
 
 public:
-    DistributionContext ctx; //||
+    context ctx; //||
 
     // #ifdef HAVE_HISTASYMMERRORS
     // 	TH2DA * hSignalCounter;
@@ -204,38 +270,12 @@ protected:
     // ClassDef(DistributionFactory, 1);
 };
 
-class MIDAS_EXPORT DifferentialContext : public DistributionContext
-{
-public:
-    AxisCfg V; // x, y are two dimensions, V is a final Variable axis
-
-    DifferentialContext();
-    DifferentialContext(const DifferentialContext& ctx);
-    virtual ~DifferentialContext();
-
-    DifferentialContext& operator=(const DifferentialContext& ctx);
-    bool operator==(const DifferentialContext& ctx);
-    bool operator!=(const DifferentialContext& ctx);
-
-    // flags
-    // 	virtual bool useCuts() const { return (cutMin or cutMax); }
-
-    virtual bool configureFromJson(const char* name);
-    virtual bool configureToJson(const char* name, const char* jsonfile);
-
-    void print() const;
-
-private:
-    TString json_fn;
-    // ClassDef(DifferentialContext, 2);
-};
-
 class MIDAS_EXPORT ExtraDimensionMapper : public TObject, public RT::Pandora
 {
 public:
-    ExtraDimensionMapper(Dimensions dim, const std::string& name, TH1* hist, const AxisCfg& axis,
+    ExtraDimensionMapper(dimension dim, const std::string& name, TH1* hist, const axis_config& axis,
                          const std::string& dir_and_name);
-    ExtraDimensionMapper(Dimensions dim, const std::string& name, TH1* hist, const AxisCfg& axis,
+    ExtraDimensionMapper(dimension dim, const std::string& name, TH1* hist, const axis_config& axis,
                          const std::string& dir_and_name, RT::Pandora* sf);
     virtual ~ExtraDimensionMapper();
 
@@ -257,21 +297,21 @@ public:
     TH1D* operator[](int n) { return histograms[n]; }
     const TH1D* operator[](int n) const { return histograms[n]; }
 
-    void Fill1D(Double_t x, Double_t v, Double_t w = 1.0);
-    void Fill2D(Double_t x, Double_t y, Double_t v, Double_t w = 1.0);
-    void Fill3D(Double_t x, Double_t y, Double_t z, Double_t v, Double_t w = 1.0);
+    void Fill1D(Float_t x, Float_t v, Float_t w = 1.0);
+    void Fill2D(Float_t x, Float_t y, Float_t v, Float_t w = 1.0);
+    void Fill3D(Float_t x, Float_t y, Float_t z, Float_t v, Float_t w = 1.0);
 
-    // 	ExtraDimensionMapper & operator=(const ExtraDimensionMapper & fa);
+    // ExtraDimensionMapper & operator=(const ExtraDimensionMapper & fa);
 private:
-    void map1D(const AxisCfg& axis);
-    void map2D(const AxisCfg& axis);
-    void map3D(const AxisCfg& axis);
+    void map1D(const axis_config& axis);
+    void map2D(const axis_config& axis);
+    void map3D(const axis_config& axis);
     void formatName(char* buff, UInt_t x, UInt_t y = 0, UInt_t z = 0);
     void formatCanvasName(char* buff, UInt_t x, UInt_t y = 0);
 
 public:
-    Dimensions dim;
-    AxisCfg axis; //||
+    dimension dim;
+    axis_config axis; //||
     std::string prefix_name;
 
     UInt_t nhists;
@@ -298,8 +338,8 @@ class MIDAS_EXPORT DifferentialFactory : public DistributionFactory
 {
 public:
     DifferentialFactory();
-    DifferentialFactory(const DifferentialContext& ctx);
-    DifferentialFactory(const DifferentialContext* ctx);
+    DifferentialFactory(const v_context& ctx);
+    DifferentialFactory(const v_context* ctx);
     virtual ~DifferentialFactory();
 
     DifferentialFactory& operator=(const DifferentialFactory& fa);
@@ -346,7 +386,7 @@ private:
     virtual void proceed3();
 
 public:
-    DifferentialContext ctx;
+    v_context ctx;
     ExtraDimensionMapper* diffs;
     TCanvas** c_Diffs;      //!
     TObjArray* objectsFits; //!
