@@ -16,9 +16,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "detail.hpp"
 #include "midas.hpp"
 
 #include <json/json.h>
+
+#include <fmt/core.h>
 
 #include <fstream>
 #include <sys/stat.h>
@@ -30,27 +33,31 @@ context::context() : TNamed(), dim(dimension::NODIM), var_weight(nullptr), json_
 
 // context::context(dimension dim) : TNamed(), dim(dim), var_weight(nullptr), json_found(false) {}
 
-context::context(TString name, dimension dim) : TNamed(), dim(dim), name(name) {}
-
-context::context(TString name, axis_config x) : TNamed(), dim(dimension::DIM1), name(name), x(std::move(x)) {}
-
-context::context(TString name, axis_config x, axis_config y)
-    : TNamed(), dim(dimension::DIM2), name(name), x(std::move(x)), y(std::move(y))
+context::context(TString context_name, dimension context_dim)
+    : TNamed(), dim(context_dim), name(context_name), var_weight(nullptr)
 {
 }
 
-context::context(TString name, axis_config x, axis_config y, axis_config z)
-    : TNamed(), dim(dimension::DIM3), name(name), x(std::move(x)), y(std::move(y)), z(std::move(z))
+context::context(TString context_name, axis_config x_axis)
+    : TNamed(), dim(dimension::DIM1), name(context_name), x(std::move(x_axis)), var_weight(nullptr)
 {
 }
 
-context::context(const context& ctx) : TNamed(), dim(ctx.dim)
+context::context(TString context_name, axis_config x_axis, axis_config y_axis)
+    : TNamed(), dim(dimension::DIM2), name(context_name), x(std::move(x_axis)), y(std::move(y_axis)),
+      var_weight(nullptr)
 {
-    *this = ctx;
-    name = ctx.name;
 }
 
-auto context::cast(dimension dim) const -> context
+context::context(TString context_name, axis_config x_axis, axis_config y_axis, axis_config z_axis)
+    : TNamed(), dim(dimension::DIM3), name(context_name), x(std::move(x_axis)), y(std::move(y_axis)),
+      z(std::move(z_axis)), var_weight(nullptr)
+{
+}
+
+context::context(const context& ctx) { *this = ctx; }
+
+auto context::cast(dimension new_dim) const -> context
 {
     context new_ctx;
     return new_ctx;
@@ -67,17 +74,17 @@ auto context::reduce() -> void
 auto context::extend() -> axis_config&
 {
     if (dim == midas::dimension::DIM3) { throw dimension_error("Cannot create next dimension"); }
-    if (dim == midas::dimension::DIM2)
+    else if (dim == midas::dimension::DIM2)
     {
         dim = midas::dimension::DIM3;
         return z;
     }
-    if (dim == midas::dimension::DIM1)
+    else if (dim == midas::dimension::DIM1)
     {
         dim = midas::dimension::DIM2;
         return y;
     }
-    if (dim == midas::dimension::NODIM)
+    else
     {
         dim = midas::dimension::DIM1;
         return x;
@@ -107,6 +114,7 @@ auto context::expand(axis_config extra_dim) -> v_context
 {
     v_context vctx = *this;
     vctx.get_v() = std::move(extra_dim);
+    return vctx;
 }
 
 auto context::update() -> bool
@@ -138,67 +146,12 @@ int context::validate() const
 
 context::~context() {}
 
-bool jsonReadTStringKey(const Json::Value& jsondata, const char* key, TString& target)
-{
-    if (jsondata.isMember(key))
-    {
-        target = jsondata[key].asCString();
-        std::cout << "    + " << key << ": " << target.Data() << std::endl;
-        return true;
-    }
-    return false;
-}
-
-bool jsonReadIntKey(const Json::Value& jsondata, const char* key, int& target)
-{
-    if (jsondata.isMember(key))
-    {
-        target = jsondata[key].asInt();
-        std::cout << "    + " << key << ": " << target << std::endl;
-        return true;
-    }
-    return false;
-}
-
-bool jsonReadUIntKey(const Json::Value& jsondata, const char* key, uint& target)
-{
-    if (jsondata.isMember(key))
-    {
-        target = jsondata[key].asInt();
-        std::cout << "    + " << key << ": " << target << std::endl;
-        return true;
-    }
-    return false;
-}
-
-bool jsonReadFloatKey(const Json::Value& jsondata, const char* key, float& target)
-{
-    if (jsondata.isMember(key))
-    {
-        target = jsondata[key].asFloat();
-        std::cout << "    + " << key << ": " << target << std::endl;
-        return true;
-    }
-    return false;
-}
-
-bool jsonReadDoubleKey(const Json::Value& jsondata, const char* key, double& target)
-{
-    if (jsondata.isMember(key))
-    {
-        target = jsondata[key].asDouble();
-        std::cout << "    + " << key << ": " << target << std::endl;
-        return true;
-    }
-    return false;
-}
-
-bool context::configureFromJson(const char* name)
+bool context::configureFromJson(const char* ctx_name)
 {
     std::ifstream ifs(json_fn.Data());
     if (!ifs.is_open()) return false;
 
-    std::cout << "  Found JSON config file for " << name << std::endl;
+    fmt::print("  Found JSON config file for {}\n", ctx_name);
     Json::Value ana, cfg, axis;
     Json::Reader reader;
 
@@ -206,19 +159,19 @@ bool context::configureFromJson(const char* name)
 
     if (!parsing_success)
     {
-        std::cout << "  Parsing failed\n";
+        fmt::print("  Parsing failed\n");
         return false;
     }
     else
-        std::cout << "  Parsing successfull\n";
+        fmt::print("  Parsing successfull\n");
 
-    if (!ana.isMember(name))
+    if (!ana.isMember(ctx_name))
     {
-        std::cout << "  No data for " << name << std::endl;
+        fmt::print("  No data for {}\n", ctx_name);
         return false;
     }
 
-    cfg = ana[name];
+    cfg = ana[ctx_name];
 
     const size_t axis_num = 3;
     const char* axis_labels[axis_num] = {"x", "y", "z"};
@@ -231,15 +184,15 @@ bool context::configureFromJson(const char* name)
         axis = cfg[axis_labels[i]];
 
         // 		jsonReadIntKey(axis, "bins", axis_ptrs[i]->bins);
-        UInt_t bins;
-        jsonReadUIntKey(axis, "bins", bins);
+        Int_t bins;
+        detail::jsonReadIntKey(axis, "bins", bins);
         Float_t min, max;
-        jsonReadFloatKey(axis, "min", min);
-        jsonReadFloatKey(axis, "max", max);
+        detail::jsonReadFloatKey(axis, "min", min);
+        detail::jsonReadFloatKey(axis, "max", max);
         // 		jsonReadTStringKey(axis, "title", axis_ptrs[i]->title);
         TString label, unit;
-        jsonReadTStringKey(axis, "label", label);
-        jsonReadTStringKey(axis, "unit", unit);
+        detail::jsonReadTStringKey(axis, "label", label);
+        detail::jsonReadTStringKey(axis, "unit", unit);
 
         axis_ptrs[i]->set_bins(bins, min, max).set_label(label).set_unit(unit);
     }
@@ -248,7 +201,7 @@ bool context::configureFromJson(const char* name)
     return true;
 }
 
-bool context::configureToJson(const char* name, const char* jsonfile)
+bool context::configureToJson(const char* ctx_name, const char* jsonfile)
 {
     (void)jsonfile;
 
@@ -267,7 +220,7 @@ bool context::configureToJson(const char* name, const char* jsonfile)
     cfg["z"] = axis;
     cfg["V"] = axis;
 
-    ana[name] = cfg;
+    ana[ctx_name] = cfg;
 
     std::cout << ana;
 
@@ -353,25 +306,26 @@ bool context::operator==(const context& ctx)
 
     if (this->dim != ctx.dim)
     {
-        fprintf(stderr, "Not the same dimensions: %d vs %d\n", this->dim, ctx.dim);
+        fmt::print(stderr, "Not the same dimensions: {} vs {}\n", detail::dim_to_int(this->dim),
+                   detail::dim_to_int(ctx.dim));
         return false;
     }
 
     if (this->x != ctx.x)
     {
-        fprintf(stderr, "Different number of x bins: %d vs %d\n", this->x.get_bins(), ctx.x.get_bins());
+        fmt::print(stderr, "Different number of x bins: {} vs {}\n", this->x.get_bins(), ctx.x.get_bins());
         return false;
     }
 
     if (this->y != ctx.y)
     {
-        fprintf(stderr, "Different number of y bins: %d vs %d\n", this->y.get_bins(), ctx.y.get_bins());
+        fmt::print(stderr, "Different number of y bins: {} vs {}\n", this->y.get_bins(), ctx.y.get_bins());
         return false;
     }
 
     if (this->z != ctx.z)
     {
-        fprintf(stderr, "Different number of z bins: %d vs %d\n", this->z.get_bins(), ctx.z.get_bins());
+        fmt::print(stderr, "Different number of z bins: {} vs {}\n", this->z.get_bins(), ctx.z.get_bins());
         return false;
     }
 
@@ -395,10 +349,6 @@ void context::format_diff_axis()
     if (dimension::DIM2 == dim) dim_cnt = 2;
     if (dimension::DIM1 == dim) dim_cnt = 1;
 
-    printf("Is dim? %d  %d\n", dim == dimension::NODIM, dimension::NODIM);
-    printf("Is dim? %d  %d\n", dim == dimension::DIM1, dimension::DIM1);
-    printf("Is dim? %d  %d\n", dim == dimension::DIM2, dimension::DIM2);
-    printf("Is dim? %d  %d\n", dim == dimension::DIM3, dimension::DIM3);
     if (dim > dimension::DIM1)
         htitle = TString::Format("d^{%d}%s/", dim_cnt, diff_var_name.Data());
     else if (dimension::DIM1 == dim)
@@ -410,13 +360,13 @@ void context::format_diff_axis()
     if (dimension::DIM2 <= dim) htitle += TString("d") + y.get_label().Data();
     if (dimension::DIM3 == dim) htitle += TString("d") + z.get_label().Data();
 
-    label = htitle;
-    unit = hunit;
+    context_label = htitle;
+    context_unit = hunit;
 
-    if (unit.Length())
-        axis_text = label + " [" + unit + "]";
+    if (context_unit.Length())
+        context_axis_text = context_label + " [" + context_unit + "]";
     else
-        axis_text = label;
+        context_axis_text = context_label;
 }
 
 TString context::format_hist_axes(const char* title) const
@@ -436,9 +386,9 @@ TString context::format_hist_axes(const char* title) const
 
 void context::print() const
 {
-    printf("Context: %s   Dimensions: %d\n", name.Data(), dim);
-    printf(" Name: %s   Hist name: %s   Dir Name: %s\n", name.Data(), hist_name.Data(), dir_name.Data());
-    printf(" Var name: %s\n", diff_var_name.Data());
+    fmt::print("Context: {}   Dimensions: {}\n", name.Data(), detail::dim_to_int(dim));
+    fmt::print(" Name: {}   Hist name: {}   Dir Name: %s\n", name.Data(), hist_name.Data(), dir_name.Data());
+    fmt::print(" Var name: {}\n", diff_var_name.Data());
     x.print();
     if (dim > midas::dimension::DIM1) y.print();
     if (dim > midas::dimension::DIM2) z.print();

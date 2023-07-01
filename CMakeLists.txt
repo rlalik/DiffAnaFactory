@@ -75,10 +75,18 @@ add_library(
     source/DifferentialFactory.cpp
     source/ExtraDimensionMapper.cpp
     source/MultiDimAnalysisContext.cpp
+    source/detail.cpp
 )
 add_library(Midas::Midas ALIAS Midas)
 
 target_link_libraries(Midas PUBLIC ROOT::Core ROOT::Gpad PRIVATE RT::Pandora HelloFitty::HelloFitty jsoncpp)
+
+if (fmt_FETCHED)
+  set(FMT_TARGET fmt::fmt-header-only)
+else()
+  set(FMT_TARGET fmt::fmt)
+endif()
+target_link_libraries(Midas PRIVATE ${FMT_TARGET})
 
 # if (HelloFitty_FOUND)
 #   target_compile_definitions(Midas PRIVATE HELLOFITTY_FOUND)

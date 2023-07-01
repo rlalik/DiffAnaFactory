@@ -18,12 +18,12 @@
 
 #include "midas.hpp"
 
-#include <json/json.h>
+#include "detail.hpp"
+
+#include <fmt/core.h>
 
 #include <fstream>
 #include <iostream>
-
-#define PR(x) std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
 
 namespace midas
 {
@@ -41,14 +41,24 @@ v_context::v_context()
     // variable used for cuts when cutCut==kTRUE
 }
 
-v_context::v_context(TString name, axis_config x, axis_config v) : context(name, x), v(std::move(v)) {}
-
-v_context::v_context(TString name, axis_config x, axis_config y, axis_config v) : context(name, x, y), v(std::move(v))
+v_context::v_context(TString context_name, dimension context_dim, axis_config v_axis)
+    : context(context_name, context_dim), v(std::move(v_axis))
 {
 }
 
-v_context::v_context(TString name, axis_config x, axis_config y, axis_config z, axis_config v)
-    : context(name, x, y, z), v(std::move(v))
+v_context::v_context(TString context_name, axis_config x_axis, axis_config v_axis)
+    : context(context_name, x_axis), v(std::move(v_axis))
+{
+}
+
+v_context::v_context(TString context_name, axis_config x_axis, axis_config y_axis, axis_config v_axis)
+    : context(context_name, x_axis, y_axis), v(std::move(v_axis))
+{
+}
+
+v_context::v_context(TString context_name, axis_config x_axis, axis_config y_axis, axis_config z_axis,
+                     axis_config v_axis)
+    : context(context_name, x_axis, y_axis, z_axis), v(std::move(v_axis))
 {
 }
 
@@ -62,18 +72,12 @@ v_context::v_context(const v_context& ctx) : context(ctx)
 
 v_context::~v_context() {}
 
-extern bool jsonReadTStringKey(const Json::Value& jsondata, const char* key, TString& target);
-extern bool jsonReadIntKey(const Json::Value& jsondata, const char* key, int& target);
-extern bool jsonReadUIntKey(const Json::Value& jsondata, const char* key, uint& target);
-extern bool jsonReadFloatKey(const Json::Value& jsondata, const char* key, float& target);
-extern bool jsonReadDoubleKey(const Json::Value& jsondata, const char* key, double& target);
-
-bool v_context::configureFromJson(const char* name)
+bool v_context::configureFromJson(const char* ctx_name)
 {
     std::ifstream ifs(json_fn.Data());
     if (!ifs.is_open()) return false;
 
-    std::cout << "  Found JSON config file for " << name << std::endl;
+    fmt::print("  Found JSON config file for {}\n", ctx_name);
     Json::Value ana, cfg, axis;
     Json::Reader reader;
 
@@ -81,40 +85,40 @@ bool v_context::configureFromJson(const char* name)
 
     if (!parsing_success)
     {
-        std::cout << "  Parsing failed\n";
+        fmt::print("  Parsing failed\n");
         return false;
     }
     else
-        std::cout << "  Parsing successfull\n";
+        fmt::print("  Parsing successfull\n");
 
-    if (!ana.isMember(name))
+    if (!ana.isMember(ctx_name))
     {
-        std::cout << "  No data for " << name << std::endl;
+        fmt::print("  No data for {}\n", ctx_name);
         return false;
     }
 
-    cfg = ana[name];
+    cfg = ana[ctx_name];
 
-    const size_t axis_num = 3;
-    const char* axis_labels[axis_num] = {"x", "y", "V"};
-    axis_config* axis_ptrs[axis_num] = {&x, &y, &v};
+    constexpr size_t axis_num = 4;
+    const char* axis_labels[axis_num] = {"x", "y", "z", "v"};
+    axis_config* axis_ptrs[axis_num] = {&x, &y, &z, &v};
 
-    for (uint i = 0; i < axis_num; ++i)
+    for (size_t i = 0; i < axis_num; ++i)
     {
         if (!cfg.isMember(axis_labels[i])) continue;
 
         axis = cfg[axis_labels[i]];
 
         // 		jsonReadIntKey(axis, "bins", axis_ptrs[i]->bins);
-        UInt_t bins;
-        jsonReadUIntKey(axis, "bins", bins);
+        Int_t bins;
+        detail::jsonReadIntKey(axis, "bins", bins);
         Float_t min, max;
-        jsonReadFloatKey(axis, "min", min);
-        jsonReadFloatKey(axis, "max", max);
+        detail::jsonReadFloatKey(axis, "min", min);
+        detail::jsonReadFloatKey(axis, "max", max);
         // 		jsonReadTStringKey(axis, "title", axis_ptrs[i]->title);
         TString label, unit;
-        jsonReadTStringKey(axis, "label", label);
-        jsonReadTStringKey(axis, "unit", unit);
+        detail::jsonReadTStringKey(axis, "label", label);
+        detail::jsonReadTStringKey(axis, "unit", unit);
 
         axis_ptrs[i]->set_bins(bins, min, max).set_label(label).set_unit(unit);
     }
@@ -123,7 +127,7 @@ bool v_context::configureFromJson(const char* name)
     return true;
 }
 
-bool v_context::configureToJson(const char* name, const char* jsonfile)
+bool v_context::configureToJson(const char* context_name, const char* jsonfile)
 {
     (void)jsonfile;
 
@@ -155,7 +159,7 @@ bool v_context::configureToJson(const char* name, const char* jsonfile)
 
     cfg["V"] = axis;
 
-    ana[name] = cfg;
+    ana[context_name] = cfg;
 
     std::cout << ana;
 
@@ -190,7 +194,7 @@ v_context& v_context::operator=(const v_context& ctx)
 
 bool v_context::operator==(const v_context& ctx)
 {
-    bool res = (context) * this == (context)ctx;
+    bool res = static_cast<context>(*this) == static_cast<context>(ctx);
     if (!res) return false;
 
     if (this->v != ctx.v)
@@ -208,7 +212,7 @@ void v_context::print() const
 {
     context::print();
     v.print();
-    printf(" label: %s  unit: %s\n", label.Data(), unit.Data());
+    printf(" label: %s  unit: %s\n", context_label.Data(), context_unit.Data());
 }
 
 }; // namespace midas

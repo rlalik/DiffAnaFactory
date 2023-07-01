@@ -18,6 +18,8 @@
 
 #include "midas.hpp"
 
+#include <fmt/core.h>
+
 namespace midas
 {
 
@@ -52,18 +54,18 @@ auto axis_config::format_unit(const TString& unit) -> TString
 auto axis_config::print() const -> void
 {
     if (!bins_arr)
-        printf(" Axis: %d bins in [ %g; %g ] range -- %s\n", bins, min, max, format_string().Data());
+        fmt::print(" Axis: {} bins in [ {:g}; {:g} ] range -- {:s}\n", bins, min, max, format_string().Data());
     else
     {
         TString buff;
-        for (uint i = 0; i < bins; ++i)
+        for (auto i = 0; i < bins; ++i)
         {
             buff += "| ";
             buff += bins_arr[i];
             buff += " ";
         }
         buff += "|";
-        printf(" Axis: %d in %s -- %s\n", bins, buff.Data(), format_string().Data());
+        fmt::print(" Axis: {} in {:s} -- {:s}\n", bins, buff.Data(), format_string().Data());
     }
 }
 

@@ -28,8 +28,6 @@
 #include <TLatex.h>
 #include <TList.h>
 
-#define PR(x) std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
-
 namespace midas
 {
 
@@ -70,10 +68,10 @@ DifferentialFactory& DifferentialFactory::operator=(const DifferentialFactory& f
     // 	nthis->objectsFits = new TObjArray();
     // 	nthis->objectsFits->SetName(ctx.name + "Fits");
 
-    (DistributionFactory)(*this) = (DistributionFactory)fa;
+    static_cast<DistributionFactory>(*this) = static_cast<DistributionFactory>(fa);
     if (!diffs) return *this;
 
-    for (uint i = 0; i < diffs->nhists; ++i)
+    for (int i = 0; i < diffs->nhists; ++i)
         copyHistogram((*fa.diffs)[i], (*diffs)[i]);
 
     return *this;
@@ -101,7 +99,7 @@ void DifferentialFactory::init_diffs()
 
 void DifferentialFactory::reinit()
 {
-    DistributionFactory::ctx = (context)ctx;
+    DistributionFactory::ctx = static_cast<context>(ctx);
     DistributionFactory::reinit();
 
     if (diffs)
@@ -189,7 +187,7 @@ void DifferentialFactory::scale(Float_t factor)
 
     if (diffs)
     {
-        for (uint i = 0; i < diffs->getNHists(); ++i)
+        for (int i = 0; i < diffs->getNHists(); ++i)
         {
             TH1* h = (*diffs)[i];
             if (h) h->Scale(factor);
@@ -209,9 +207,9 @@ void DifferentialFactory::applyAngDists(double a2, double a4, double corr_a2, do
     DistributionFactory::applyAngDists(a2, a4, corr_a2, corr_a4);
     if (diffs)
     {
-        for (uint i = 0; i < diffs->getNHists(); ++i)
+        for (int i = 0; i < diffs->getNHists(); ++i)
         {
-            DistributionFactory::applyAngDists((TH1*)(*diffs)[i], a2, a4, corr_a2, corr_a4);
+            DistributionFactory::applyAngDists(dynamic_cast<TH1*>((*diffs)[i]), a2, a4, corr_a2, corr_a4);
         }
     }
 }
@@ -238,15 +236,15 @@ void DifferentialFactory::niceDiffs(float mt, float mr, float mb, float ml, int 
 {
     if (diffs)
     {
-        for (uint i = 0; i < diffs->getNHists(); ++i)
+        for (int i = 0; i < diffs->getNHists(); ++i)
         {
-            UInt_t bx, by, bz;
+            Int_t bx, by, bz;
             diffs->reverseBin(i, bx, by, bz);
             TVirtualPad* p = diffs->getPad(bx, by, bz);
             RT::Hist::NicePad(p, mt, mr, mb, ml);
 
             TH1* h = (*diffs)[i];
-            RT::Hist::NiceHistogram(h, ndivx, ndivy, xls, 0.005, xts, xto, yls, 0.005, yts, yto, centerY, centerX);
+            RT::Hist::NiceHistogram(h, ndivx, ndivy, xls, 0.005f, xts, xto, yls, 0.005f, yts, yto, centerY, centerX);
         }
     }
 }
@@ -267,19 +265,19 @@ void DifferentialFactory::niceSlices(float mt, float mr, float mb, float ml, int
 
 void DifferentialFactory::prepareDiffCanvas()
 {
-    TLatex* latex = new TLatex();
-    latex->SetNDC();
-    latex->SetTextSize(0.07);
+    TLatex latex;
+    latex.SetNDC();
+    latex.SetTextSize(0.07f);
 
-    TLatex* nflatex = new TLatex();
-    nflatex->SetNDC();
-    nflatex->SetTextSize(0.07);
-    nflatex->SetTextAlign(23);
+    TLatex nflatex;
+    nflatex.SetNDC();
+    nflatex.SetTextSize(0.07f);
+    nflatex.SetTextAlign(23);
 
-    size_t nhists = diffs->getNHists();
-    for (uint i = 0; i < nhists; ++i)
+    auto nhists = diffs->getNHists();
+    for (int i = 0; i < nhists; ++i)
     {
-        UInt_t bx = 0, by = 0, bz = 0;
+        Int_t bx = 0, by = 0, bz = 0;
         diffs->reverseBin(i, bx, by, bz);
 
         TVirtualPad* pad = diffs->getPad(bx, by, bz);
@@ -294,28 +292,23 @@ void DifferentialFactory::prepareDiffCanvas()
         else if (ctx.dim == dimension::DIM3)
             pad_number = bz;
 
-        latex->DrawLatex(0.12, 0.85, TString::Format("%02d", pad_number));
+        latex.DrawLatex(0.12, 0.85, TString::Format("%02d", pad_number));
 
-        TList* flist = h->GetListOfFunctions();
-        size_t fs = flist->GetEntries();
+        auto flist = h->GetListOfFunctions();
+        auto fs = flist->GetEntries();
         if (fs < 3)
         {
-            latex->DrawLatex(0.55, 0.85, TString::Format("E=%g", h->GetEntries()));
-            latex->DrawLatex(0.55, 0.80, TString::Format("R=%g", h->GetRMS()));
-            latex->DrawLatex(0.55, 0.75, TString::Format("E/R=%g", h->GetEntries() / h->GetRMS()));
+            latex.DrawLatex(0.55, 0.85, TString::Format("E=%g", h->GetEntries()));
+            latex.DrawLatex(0.55, 0.80, TString::Format("R=%g", h->GetRMS()));
+            latex.DrawLatex(0.55, 0.75, TString::Format("E/R=%g", h->GetEntries() / h->GetRMS()));
 
-            nflatex->DrawLatex(0.5, 0.5, "No fit");
+            nflatex.DrawLatex(0.5, 0.5, "No fit");
             continue;
         }
 
-        Float_t Y_l = ctx.y.get_min() + ctx.y.get_delta() * by;
-        Float_t Y_h = ctx.y.get_min() + ctx.y.get_delta() * (by + 1);
-        Float_t X_l = ctx.x.get_min() + ctx.x.get_delta() * bx;
-        Float_t X_h = ctx.x.get_min() + ctx.x.get_delta() * (bx + 1);
-
-        TF1* tfSum = (TF1*)flist->At(0);
-        TF1* tfSig = (TF1*)flist->At(1);
-        TF1* tfBkg = (TF1*)flist->At(2);
+        TF1* tfSum = dynamic_cast<TF1*>(flist->At(0));
+        TF1* tfSig = dynamic_cast<TF1*>(flist->At(1));
+        TF1* tfBkg = dynamic_cast<TF1*>(flist->At(2));
 
         tfSig->SetLineColor(kBlack);
         tfSig->SetLineWidth(1);
@@ -332,36 +325,54 @@ void DifferentialFactory::prepareDiffCanvas()
         tfBkg->Draw("same");
         tfSum->Draw("same");
 
-        TH1* hsigclone = ((TH1*)h->Clone("hsig"));
+        auto hsigclone = dynamic_cast<TH1*>(h->Clone("hsig"));
         hsigclone->Add(tfBkg, -1);
         hsigclone->Delete();
 
         h->SetTitle("");
-        TLatex* latex = new TLatex();
-        latex->SetNDC();
-        latex->SetTextColor(/*36*/ 1);
-        latex->SetTextSize(0.06);
-        Int_t oldalign = latex->GetTextAlign();
-        Int_t centeralign = 23;
+        TLatex loop_latex;
+        loop_latex.SetNDC();
+        loop_latex.SetTextColor(/*36*/ 1);
+        loop_latex.SetTextSize(0.06f);
+        auto oldalign = loop_latex.GetTextAlign();
+        Short_t centeralign = 23;
 
-        Float_t centerpos = (1 - pad->GetRightMargin() + pad->GetLeftMargin()) / 2;
+        auto centerpos = (1 - pad->GetRightMargin() + pad->GetLeftMargin()) / 2;
 
-        latex->SetTextAlign(centeralign);
-        latex->DrawLatex(centerpos, 1.01, TString::Format("%.2f < %s < %.2f", X_l, ctx.x.get_label().Data(), X_h));
-        latex->DrawLatex(centerpos, 0.96, TString::Format("%.0f < %s < %.0f", Y_l, ctx.y.get_label().Data(), Y_h));
-        latex->SetTextAlign(oldalign);
-        latex->SetTextColor(/*36*/ 1);
+        loop_latex.SetTextAlign(centeralign);
+        if (ctx.dim >= dimension::DIM1)
+        {
+            auto X_l = ctx.x.get_min() + ctx.x.get_delta() * static_cast<float>(bx);
+            auto X_h = ctx.x.get_min() + ctx.x.get_delta() * static_cast<float>(1 + bx);
+            loop_latex.DrawLatex(centerpos, 1.01,
+                                 TString::Format("%.2f < %s < %.2f", X_l, ctx.x.get_label().Data(), X_h));
+        }
+        if (ctx.dim >= dimension::DIM2)
+        {
+            auto Y_l = ctx.y.get_min() + ctx.y.get_delta() * static_cast<float>(by);
+            auto Y_h = ctx.y.get_min() + ctx.y.get_delta() * static_cast<float>(1 + by);
+            loop_latex.DrawLatex(centerpos, 0.96,
+                                 TString::Format("%.0f < %s < %.0f", Y_l, ctx.y.get_label().Data(), Y_h));
+        }
+        if (ctx.dim >= dimension::DIM3)
+        {
+            auto Z_l = ctx.y.get_min() + ctx.z.get_delta() * static_cast<float>(bz);
+            auto Z_h = ctx.y.get_min() + ctx.z.get_delta() * static_cast<float>(1 + bz);
+            loop_latex.DrawLatex(centerpos, 0.91,
+                                 TString::Format("%.0f < %s < %.0f", Z_l, ctx.z.get_label().Data(), Z_h));
+        }
+        loop_latex.SetTextAlign(oldalign);
+        loop_latex.SetTextColor(/*36*/ 1);
 
         int fitnpar = tfSig->GetNpar();
-        for (int i = 0; i < fitnpar; ++i)
+        for (int j = 0; j < fitnpar; ++j)
         {
-            latex->DrawLatex(0.5, 0.81 - 0.05 * i,
-                             TString::Format("[%d] %5g#pm%.2g", i, tfSig->GetParameter(i), tfSig->GetParError(i)));
+            loop_latex.DrawLatex(0.5, 0.81 - 0.05 * j,
+                                 TString::Format("[%d] %5g#pm%.2g", j, tfSig->GetParameter(j), tfSig->GetParError(j)));
         }
-        latex->DrawLatex(0.5, 0.25, TString::Format("#chi^{2}/ndf = %g", tfSum->GetChisquare() / tfSum->GetNDF()));
-        latex->DrawLatex(0.5, 0.20, TString::Format(" %.2g/%d", tfSum->GetChisquare(), tfSum->GetNDF()));
+        loop_latex.DrawLatex(0.5, 0.25, TString::Format("#chi^{2}/ndf = %g", tfSum->GetChisquare() / tfSum->GetNDF()));
+        loop_latex.DrawLatex(0.5, 0.20, TString::Format(" %.2g/%d", tfSum->GetChisquare(), tfSum->GetNDF()));
     }
-    latex->Delete();
 }
 
 void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, hf::fitter& hf, hf::fit_entry& stdfit,
@@ -370,22 +381,23 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, hf::fitter& 
     // 	FitResultData res;
     bool res;
 
-    TLatex* nofit_text = new TLatex();
-    nofit_text->SetTextAlign(23);
-    nofit_text->SetNDC();
+    TLatex nofit_text;
+    nofit_text.SetTextAlign(23);
+    nofit_text.SetNDC();
 
     int info_text = 0;
-    TVirtualPad* pad = nullptr;
-    TCanvas* can = nullptr;
 
-    UInt_t lx = diffs->nbins_x;
-    UInt_t ly = diffs->nbins_y;
-    UInt_t lz = diffs->nbins_z;
+    auto lx = diffs->nbins_x;
+    auto ly = diffs->nbins_y;
+    auto lz = diffs->nbins_z;
 
-    for (UInt_t bx = 0; (bx < lx && lx > 0) || bx == 0; ++bx)
-        for (UInt_t by = 0; (by < ly && ly > 0) || by == 0; ++by)
-            for (UInt_t bz = 0; (bz < lz && lz > 0) || bz == 0; ++bz)
+    for (auto bx = 0; (bx < lx && lx > 0) || bx == 0; ++bx)
+        for (auto by = 0; (by < ly && ly > 0) || by == 0; ++by)
+            for (auto bz = 0; (bz < lz && lz > 0) || bz == 0; ++bz)
             {
+                TVirtualPad* pad = nullptr;
+                TCanvas* can = nullptr;
+
                 if (ctx.dim == dimension::DIM3)
                 {
                     can = diffs->getCanvas(bx, by);
@@ -403,7 +415,7 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, hf::fitter& 
                 }
 
                 // 		can->Draw(h1opts); FIXME ???
-                RT::Hist::NicePad(pad, 0.10, 0.01, 0.15, 0.10);
+                RT::Hist::NicePad(pad, 0.10f, 0.01f, 0.15f, 0.10f);
 
                 TH1D* hfit = diffs->get(bx, by, bz);
                 hfit->SetStats(0);
@@ -502,10 +514,10 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, hf::fitter& 
                 switch (info_text)
                 {
                     case 1:
-                        nofit_text->DrawLatex(0.65, 0.65, "No fit");
+                        nofit_text.DrawLatex(0.65f, 0.65f, "No fit");
                         break;
                     case 2:
-                        nofit_text->DrawLatex(0.65, 0.65, "Fit disabled");
+                        nofit_text.DrawLatex(0.65f, 0.65f, "Fit disabled");
                         break;
                     default:
                         break;
@@ -528,7 +540,7 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, hf::fitter& 
 
     if (!sigfac) return;
 
-    RT::NicePalette((TH2*)(sigfac->hSignalCounter), 0.05);
+    RT::NicePalette(dynamic_cast<TH2*>(sigfac->hSignalCounter), 0.05f);
 
     printf("Raw/fine binning counts:  %f / %f  for %s\n", sigfac->hSignalCounter->Integral(),
            sigfac->hSignalCounter->Integral(), ctx.hist_name.Data());
@@ -561,8 +573,8 @@ bool DifferentialFactory::fitDiffHist(TH1* hist, hf::fit_entry* hfp, double min_
     // otherwise nothing to do here
     if (!res) return false;
 
-    // 	tfSum = (TF1*)hist->GetListOfFunctions()->At(0);
-    tfSig = (TF1*)hist->GetListOfFunctions()->At(1);
+    // 	tfSum = dynamic_cast<TF1*<(hist->GetListOfFunctions()->At(0);
+    tfSig = dynamic_cast<TF1*>(hist->GetListOfFunctions()->At(1));
 
     // do not draw Sig function in the histogram
     tfSig->SetBit(TF1::kNotDraw);

@@ -52,51 +52,54 @@ public:
     using std::runtime_error::runtime_error;
 };
 
+/// Stores pointer to a variable and histogram description in means of bins, range
+/// (or array of bins) and also axis description like label and unit.
 class MIDAS_EXPORT axis_config final
 {
 public:
     axis_config();
-    axis_config(Float_t* var) : var(var) {}
+    /// @param ptr the variable pointer
+    axis_config(Float_t* ptr) : var(ptr) {}
 
     auto operator==(const axis_config& ctx) -> bool;
     auto operator!=(const axis_config& ctx) -> bool;
 
-    auto set_variable(Float_t* var) -> axis_config&
+    auto set_variable(Float_t* ptr) -> axis_config&
     {
-        this->var = var;
+        var = ptr;
         return *this;
     }
-    auto set_bins(UInt_t bins, Float_t min, Float_t max) -> axis_config&
+    auto set_bins(Int_t hist_bins, Float_t range_min, Float_t range_max) -> axis_config&
     {
-        this->bins = bins;
-        this->min = min;
-        this->max = max;
-        this->bins_arr = nullptr;
-        this->delta = (max - min) / bins;
+        bins = hist_bins;
+        min = range_min;
+        max = range_max;
+        bins_arr = nullptr;
+        delta = (max - min) / static_cast<Float_t>(bins);
         return *this;
     }
-    auto set_bins(Float_t* bins) -> axis_config&
+    auto set_bins(Float_t* bins_array) -> axis_config&
     {
-        this->bins = 0;
-        this->min = 0.0;
-        this->max = 0.0;
-        this->bins_arr = bins;
-        this->delta = 0.0;
+        bins = 0;
+        min = 0.0;
+        max = 0.0;
+        bins_arr = bins_array;
+        delta = 0.0;
         return *this;
     }
-    auto set_label(TString label) -> axis_config&
+    auto set_label(TString axis_label) -> axis_config&
     {
-        this->label = std::move(label);
+        label = std::move(axis_label);
         return *this;
     }
-    auto set_unit(TString unit) -> axis_config&
+    auto set_unit(TString axis_unit) -> axis_config&
     {
-        this->unit = std::move(unit);
+        unit = std::move(axis_unit);
         return *this;
     }
 
     auto get_var() const -> const Float_t* { return var; }
-    auto get_bins() const -> UInt_t { return bins; }
+    auto get_bins() const -> Int_t { return bins; }
     auto get_min() const -> Float_t { return min; }
     auto get_max() const -> Float_t { return max; }
     auto get_delta() const -> Float_t { return delta; }
@@ -118,7 +121,7 @@ private:
     TString unit;  // unit for the axis
     // TString title;   // title for the axis
     Float_t* var;      //!	here is the address of the variable which is used to fill data
-    UInt_t bins;       // number of bins
+    Int_t bins;        // number of bins
     Float_t min;       // minimum axis value
     Float_t max;       // maximum axis value
     Float_t* bins_arr; //! here one can put custom bins division array
@@ -150,14 +153,13 @@ protected:
     TString hist_name; // name for histograms
     TString diff_var_name;
 
-    TString title;
-    TString label;
-    TString unit;
-    TString axis_text;
+    TString context_title;
+    TString context_label;
+    TString context_unit;
+    TString context_axis_text;
 
     axis_config x, y, z; // x..z are dimensions, V is an observable variable axis
 
-    // cut range when useCut==kTRUE
     // 	Double_t cutMin;			// Cut: min
     // 	Double_t cutMax;			// Cut: max
 
@@ -169,10 +171,10 @@ protected:
     context();
 
 public:
-    context(TString name, dimension dim);
-    context(TString name, axis_config x);
-    context(TString name, axis_config x, axis_config y);
-    context(TString name, axis_config x, axis_config y, axis_config z);
+    context(TString context_name, dimension context_dim);
+    context(TString context_name, axis_config x_axis);
+    context(TString context_name, axis_config x_axis, axis_config y_axis);
+    context(TString context_name, axis_config x_axis, axis_config y_axis, axis_config z_axis);
     context(const context& ctx);
     virtual ~context();
 
@@ -180,7 +182,7 @@ public:
     bool operator==(const context& ctx);
     bool operator!=(const context& ctx);
 
-    auto cast(dimension dim) const -> context;
+    auto cast(dimension new_dim) const -> context;
     auto reduce() -> void;
     auto extend() -> axis_config&;
     auto extend(axis_config next_dim) -> void;
@@ -193,8 +195,8 @@ public:
 
     // auto get_dimension() const -> dimension { return dim; }
     // auto get_name() const -> const TString { return name; }
-    auto get_title() const -> const TString { return title; }
-    auto get_label() const -> const TString& { return label; }
+    auto get_title() const -> const TString { return context_title; }
+    auto get_label() const -> const TString& { return context_label; }
     // auto get_unit() const -> const TString& { return unit; }
     // auto get_axis_text() const -> const TString& { return axis_text; }
 
@@ -227,14 +229,15 @@ class MIDAS_EXPORT v_context : public context
 protected:
     axis_config v; // x, y are two dimensions, V is a final Variable axis
 
-public:
+private:
     v_context();
-    v_context(TString name, dimension dim) : context(name, dim) {} // FIXME to be removed
-    v_context(TString name, dimension dim, axis_config v) : context(name, dim), v(std::move(v)) {}
 
-    v_context(TString name, axis_config x, axis_config v);
-    v_context(TString name, axis_config x, axis_config y, axis_config v);
-    v_context(TString name, axis_config x, axis_config y, axis_config z, axis_config v);
+public:
+    using context::context;
+    v_context(TString name, dimension dim, axis_config v_axis);
+    v_context(TString name, axis_config x_axis, axis_config v_axis);
+    v_context(TString name, axis_config x_axis, axis_config y_axis, axis_config v_axis);
+    v_context(TString name, axis_config x_axis, axis_config y_axis, axis_config z_axis, axis_config v_axis);
     v_context(const context& ctx);
     v_context(const v_context& ctx);
     virtual ~v_context();
@@ -329,49 +332,49 @@ protected:
 class MIDAS_EXPORT ExtraDimensionMapper : public TObject, public RT::Pandora
 {
 public:
-    ExtraDimensionMapper(dimension dim, const std::string& name, TH1* hist, const axis_config& axis,
+    ExtraDimensionMapper(dimension dist_dim, const std::string& name, TH1* hist, const axis_config& v_axis,
                          const std::string& dir_and_name);
-    ExtraDimensionMapper(dimension dim, const std::string& name, TH1* hist, const axis_config& axis,
+    ExtraDimensionMapper(dimension dist_dim, const std::string& name, TH1* hist, const axis_config& v_axis,
                          const std::string& dir_and_name, RT::Pandora* sf);
     virtual ~ExtraDimensionMapper();
 
-    UInt_t getBinsX() const { return nbins_x; }
-    UInt_t getBinsY() const { return nbins_y; }
-    UInt_t getBinsZ() const { return nbins_z; }
+    auto getBinsX() const -> Int_t { return nbins_x; }
+    auto getBinsY() const -> Int_t { return nbins_y; }
+    auto getBinsZ() const -> Int_t { return nbins_z; }
 
-    UInt_t getBin(UInt_t x, UInt_t y = 0, UInt_t z = 0) const;
-    bool reverseBin(UInt_t bin, UInt_t& x) const;
-    bool reverseBin(UInt_t bin, UInt_t& x, UInt_t& y) const;
-    bool reverseBin(UInt_t bin, UInt_t& x, UInt_t& y, UInt_t& z) const;
+    auto getBin(Int_t x, Int_t y = 0, Int_t z = 0) const -> Int_t;
+    auto reverseBin(Int_t bin, Int_t& x) const -> bool;
+    auto reverseBin(Int_t bin, Int_t& x, Int_t& y) const -> bool;
+    auto reverseBin(Int_t bin, Int_t& x, Int_t& y, Int_t& z) const -> bool;
 
-    TH1D* get(UInt_t x, UInt_t y = 0, UInt_t z = 0);
+    TH1D* get(Int_t x, Int_t y = 0, Int_t z = 0);
     TH1D* find(Double_t x, Double_t y = 0.0, Double_t z = 0.0);
-    TCanvas* getCanvas(UInt_t x, UInt_t y = 0);
-    TVirtualPad* getPad(UInt_t x, UInt_t y = 0, UInt_t z = 0);
+    TCanvas* getCanvas(Int_t x, Int_t y = 0);
+    TVirtualPad* getPad(Int_t x, Int_t y = 0, Int_t z = 0);
 
-    size_t getNHists() const { return nhists; }
-    TH1D* operator[](int n) { return histograms[n]; }
-    const TH1D* operator[](int n) const { return histograms[n]; }
+    auto getNHists() const -> Int_t { return nhists; }
+    auto operator[](int n) -> TH1D* { return histograms[n]; }
+    auto operator[](int n) const -> const TH1D* { return histograms[n]; }
 
-    void Fill1D(Float_t x, Float_t v, Float_t w = 1.0);
-    void Fill2D(Float_t x, Float_t y, Float_t v, Float_t w = 1.0);
-    void Fill3D(Float_t x, Float_t y, Float_t z, Float_t v, Float_t w = 1.0);
+    auto Fill1D(Float_t x, Float_t v, Float_t w = 1.0) -> void;
+    auto Fill2D(Float_t x, Float_t y, Float_t v, Float_t w = 1.0) -> void;
+    auto Fill3D(Float_t x, Float_t y, Float_t z, Float_t v, Float_t w = 1.0) -> void;
 
     // ExtraDimensionMapper & operator=(const ExtraDimensionMapper & fa);
 private:
-    void map1D(const axis_config& axis);
-    void map2D(const axis_config& axis);
-    void map3D(const axis_config& axis);
-    void formatName(char* buff, UInt_t x, UInt_t y = 0, UInt_t z = 0);
-    void formatCanvasName(char* buff, UInt_t x, UInt_t y = 0);
+    auto map1D(const axis_config& axis) -> void;
+    auto map2D(const axis_config& axis) -> void;
+    auto map3D(const axis_config& axis) -> void;
+    auto formatName(Int_t x, Int_t y = 0, Int_t z = 0) -> TString;
+    auto formatCanvasName(Int_t x, Int_t y = 0) -> TString;
 
 public:
     dimension dim;
     axis_config axis; //||
     std::string prefix_name;
 
-    UInt_t nhists;
-    UInt_t nbins_x, nbins_y, nbins_z;
+    Int_t nhists;
+    Int_t nbins_x, nbins_y, nbins_z;
 
     TH1* ref_hist;
     TH1D** histograms;  //!
