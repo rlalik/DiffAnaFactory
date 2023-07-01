@@ -17,28 +17,99 @@
 */
 
 #include "midas.hpp"
+
 #include <json/json.h>
 
 #include <fstream>
-#include <iostream>
 #include <sys/stat.h>
-
-#define PR(x) std::cout << "++DEBUG: " << #x << " = |" << x << "| (" << __FILE__ << ", " << __LINE__ << ")\n";
 
 namespace midas
 {
 
-context::context() : TNamed(), dim(NOINIT), var_weight(nullptr), json_found(false) {}
+context::context() : TNamed(), dim(dimension::NODIM), var_weight(nullptr), json_found(false) {}
 
-context::context(dimension dim) : TNamed(), dim(dim), var_weight(nullptr), json_found(false) {}
+// context::context(dimension dim) : TNamed(), dim(dim), var_weight(nullptr), json_found(false) {}
 
-context::context(const context& ctx) : TNamed()
+context::context(TString name, dimension dim) : TNamed(), dim(dim), name(name) {}
+
+context::context(TString name, axis_config x) : TNamed(), dim(dimension::DIM1), name(name), x(std::move(x)) {}
+
+context::context(TString name, axis_config x, axis_config y)
+    : TNamed(), dim(dimension::DIM2), name(name), x(std::move(x)), y(std::move(y))
+{
+}
+
+context::context(TString name, axis_config x, axis_config y, axis_config z)
+    : TNamed(), dim(dimension::DIM3), name(name), x(std::move(x)), y(std::move(y)), z(std::move(z))
+{
+}
+
+context::context(const context& ctx) : TNamed(), dim(ctx.dim)
 {
     *this = ctx;
     name = ctx.name;
 }
 
-bool context::update()
+auto context::cast(dimension dim) const -> context
+{
+    context new_ctx;
+    return new_ctx;
+}
+
+auto context::reduce() -> void
+{
+    if (dim == midas::dimension::DIM1) { throw dimension_error("Cannot reduce single dimension"); }
+    else if (dim == midas::dimension::DIM2) { dim = midas::dimension::DIM1; }
+    else if (dim == midas::dimension::DIM3) { dim = midas::dimension::DIM2; }
+    else { throw dimension_error("Cannot reduce empty dimension"); }
+}
+
+auto context::extend() -> axis_config&
+{
+    if (dim == midas::dimension::DIM3) { throw dimension_error("Cannot create next dimension"); }
+    if (dim == midas::dimension::DIM2)
+    {
+        dim = midas::dimension::DIM3;
+        return z;
+    }
+    if (dim == midas::dimension::DIM1)
+    {
+        dim = midas::dimension::DIM2;
+        return y;
+    }
+    if (dim == midas::dimension::NODIM)
+    {
+        dim = midas::dimension::DIM1;
+        return x;
+    }
+}
+
+auto context::extend(axis_config next_dim) -> void { extend() = std::move(next_dim); }
+
+auto context::get_x() -> axis_config&
+{
+    if (dim < midas::dimension::DIM1) { throw dimension_error("Dimension 'x' not enabled"); }
+    return x;
+}
+
+auto context::get_y() -> axis_config&
+{
+    if (dim < midas::dimension::DIM2) { throw dimension_error("Dimension 'y' not enabled"); }
+    return y;
+}
+auto context::get_z() -> axis_config&
+{
+    if (dim < midas::dimension::DIM3) { throw dimension_error("Dimension 'z' not enabled"); }
+    return z;
+}
+
+auto context::expand(axis_config extra_dim) -> v_context
+{
+    v_context vctx = *this;
+    vctx.get_v() = std::move(extra_dim);
+}
+
+auto context::update() -> bool
 {
     if (0 == hist_name.Length()) hist_name = name;
 
@@ -57,10 +128,9 @@ bool context::update()
 int context::validate() const
 {
     if (0 == name.Length()) return 1;
-    if (DIM0 <= dim && x.get_bins() and !x.get_var()) return 11;
-    if (DIM1 <= dim && x.get_bins() and !x.get_var()) return 11;
-    if (DIM2 <= dim && y.get_bins() and !y.get_var()) return 12;
-    if (DIM3 == dim && z.get_bins() and !z.get_var()) return 13;
+    if (dimension::DIM1 <= dim && x.get_bins() and !x.get_var()) return 11;
+    if (dimension::DIM2 <= dim && y.get_bins() and !y.get_var()) return 12;
+    if (dimension::DIM3 == dim && z.get_bins() and !z.get_var()) return 13;
 
     return 0;
     // 	return update();
@@ -254,29 +324,28 @@ bool context::findJsonFile(const char* initial_path, const char* filename, int s
     return json_found;
 }
 
-context& context::operator=(const context& ctx)
-{
-    if (this == &ctx) return *this;
-
-    dim = ctx.dim;
-    // 	ctx_name = ctx.ctx_name;
-    dir_name = ctx.dir_name;
-    hist_name = ctx.hist_name;
-    diff_var_name = ctx.diff_var_name;
-
-    title = ctx.title;
-    label = ctx.label;
-    unit = ctx.unit;
-    axis_text = ctx.axis_text;
-
-    x = ctx.x;
-    y = ctx.y;
-    z = ctx.z;
-
-    var_weight = ctx.var_weight;
-
-    return *this;
-}
+// context& context::operator=(const context& ctx)
+// {
+//     if (this == &ctx) return *this;
+//
+//     // 	ctx_name = ctx.ctx_name;
+//     dir_name = ctx.dir_name;
+//     hist_name = ctx.hist_name;
+//     diff_var_name = ctx.diff_var_name;
+//
+//     title = ctx.title;
+//     label = ctx.label;
+//     unit = ctx.unit;
+//     axis_text = ctx.axis_text;
+//
+//     x = ctx.x;
+//     y = ctx.y;
+//     z = ctx.z;
+//
+//     var_weight = ctx.var_weight;
+//
+//     return *this;
+// }
 
 bool context::operator==(const context& ctx)
 {
@@ -313,29 +382,33 @@ bool context::operator!=(const context& ctx) { return !operator==(ctx); }
 
 void context::format_diff_axis()
 {
+    if (dim == dimension::NODIM) { throw dimension_error("Dimension not set"); }
+
     TString hunit = "1/";
-    if (DIM0 <= dim) hunit += x.get_unit().Data();
-    if (DIM1 <= dim) hunit += x.get_unit().Data();
-    if (DIM2 <= dim) hunit += y.get_unit().Data();
-    if (DIM3 == dim) hunit += z.get_unit().Data();
+    if (dimension::DIM1 <= dim) hunit += x.get_unit().Data();
+    if (dimension::DIM2 <= dim) hunit += y.get_unit().Data();
+    if (dimension::DIM3 == dim) hunit += z.get_unit().Data();
 
     UInt_t dim_cnt = 0;
     TString htitle;
-    if (DIM3 == dim) dim_cnt = 3;
-    if (DIM2 == dim) dim_cnt = 2;
-    if (DIM1 == dim) dim_cnt = 1;
-    if (DIM0 == dim) dim_cnt = 0;
+    if (dimension::DIM3 == dim) dim_cnt = 3;
+    if (dimension::DIM2 == dim) dim_cnt = 2;
+    if (dimension::DIM1 == dim) dim_cnt = 1;
 
-    if (DIM1 < dim)
+    printf("Is dim? %d  %d\n", dim == dimension::NODIM, dimension::NODIM);
+    printf("Is dim? %d  %d\n", dim == dimension::DIM1, dimension::DIM1);
+    printf("Is dim? %d  %d\n", dim == dimension::DIM2, dimension::DIM2);
+    printf("Is dim? %d  %d\n", dim == dimension::DIM3, dimension::DIM3);
+    if (dim > dimension::DIM1)
         htitle = TString::Format("d^{%d}%s/", dim_cnt, diff_var_name.Data());
-    else if (DIM1 == dim)
+    else if (dimension::DIM1 == dim)
         htitle = TString::Format("d%s/", diff_var_name.Data());
     else
         htitle = TString::Format("%s", diff_var_name.Data());
 
-    if (DIM1 <= dim) htitle += TString("d") + x.get_label().Data();
-    if (DIM2 <= dim) htitle += TString("d") + y.get_label().Data();
-    if (DIM3 == dim) htitle += TString("d") + z.get_label().Data();
+    if (dimension::DIM1 <= dim) htitle += TString("d") + x.get_label().Data();
+    if (dimension::DIM2 <= dim) htitle += TString("d") + y.get_label().Data();
+    if (dimension::DIM3 == dim) htitle += TString("d") + z.get_label().Data();
 
     label = htitle;
     unit = hunit;
@@ -348,17 +421,14 @@ void context::format_diff_axis()
 
 TString context::format_hist_axes(const char* title) const
 {
-    if (DIM3 == dim)
+    if (dimension::DIM3 == dim)
         return TString::Format("%s;%s%s%s;%s%s%s", title, x.get_label().Data(), x.format_unit().Data(),
                                y.get_label().Data(), y.format_unit().Data(), z.get_label().Data(),
                                z.format_unit().Data());
-    else if (DIM2 == dim)
+    else if (dimension::DIM2 == dim)
         return TString::Format("%s;%s%s;%s%s", title, x.get_label().Data(), x.format_unit().Data(),
                                y.get_label().Data(), y.format_unit().Data());
-    else if (DIM1 == dim)
-        return TString::Format("%s;%s%s;Counts [aux]", title, x.get_label().Data(), x.format_unit().Data());
-
-    else if (DIM0 == dim)
+    else if (dimension::DIM1 == dim)
         return TString::Format("%s;%s%s;Counts [aux]", title, x.get_label().Data(), x.format_unit().Data());
 
     return TString::Format("%s;;", title);
@@ -370,8 +440,7 @@ void context::print() const
     printf(" Name: %s   Hist name: %s   Dir Name: %s\n", name.Data(), hist_name.Data(), dir_name.Data());
     printf(" Var name: %s\n", diff_var_name.Data());
     x.print();
-    y.print();
-    z.print();
+    if (dim > midas::dimension::DIM1) y.print();
+    if (dim > midas::dimension::DIM2) z.print();
 }
-
 }; // namespace midas

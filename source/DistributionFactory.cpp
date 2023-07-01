@@ -34,7 +34,8 @@ namespace midas
 {
 
 DistributionFactory::DistributionFactory()
-    : RT::Pandora(""), ctx(context()), hSignalCounter(nullptr), cSignalCounter(nullptr), drawOpts("colz")
+    : RT::Pandora(""), ctx(context("", dimension::NODIM)), hSignalCounter(nullptr), cSignalCounter(nullptr),
+      drawOpts("colz")
 {
     prepare();
 }
@@ -61,7 +62,6 @@ DistributionFactory& DistributionFactory::operator=(const DistributionFactory& f
     DistributionFactory* nthis = this; // new DistributionFactory(fa.ctx);
 
     nthis->ctx = fa.ctx;
-    nthis->ctx.name = fa.ctx.name;
 
     init();
 
@@ -81,14 +81,10 @@ void DistributionFactory::init()
     TString htitle = ctx.format_hist_axes();
     TString htitlez = ctx.z.format_string();
 
-    if (NOINIT == ctx.dim)
-    {
-        std::cerr << "No dimension specified." << std::endl;
-        abort();
-    }
+    if (ctx.dim == dimension::NODIM) { throw dimension_error("Dimension not set"); }
 
     // input histograms
-    if (DIM3 == ctx.dim && !hSignalCounter)
+    if (dimension::DIM3 == ctx.dim && !hSignalCounter)
     {
         hSignalCounter =
             RegTH3<TH3D>("@@@d/h_@@@a", htitle, ctx.x.get_bins(), ctx.x.get_min(), ctx.x.get_max(), ctx.y.get_bins(),
@@ -96,7 +92,7 @@ void DistributionFactory::init()
         hSignalCounter->SetTitle(ctx.title);
     }
 
-    if (DIM2 == ctx.dim && !hSignalCounter)
+    if (dimension::DIM2 == ctx.dim && !hSignalCounter)
     {
 #ifdef HAVE_HISTASYMMERRORS
         hSignalCounter = RegTH2<TH2DA>("@@@d/h_@@@a", htitle,
@@ -108,13 +104,7 @@ void DistributionFactory::init()
         hSignalCounter->SetTitle(ctx.title);
     }
 
-    if (DIM1 == ctx.dim && !hSignalCounter)
-    {
-        hSignalCounter = RegTH1<TH1D>("@@@d/h_@@@a", htitle, ctx.x.get_bins(), ctx.x.get_min(), ctx.x.get_max());
-        hSignalCounter->SetTitle(ctx.title);
-    }
-
-    if (DIM0 == ctx.dim && !hSignalCounter)
+    if (dimension::DIM1 == ctx.dim && !hSignalCounter)
     {
         hSignalCounter = RegTH1<TH1D>("@@@d/h_@@@a", htitle, ctx.x.get_bins(), ctx.x.get_min(), ctx.x.get_max());
         hSignalCounter->SetTitle(ctx.title);
@@ -150,14 +140,12 @@ void DistributionFactory::reinit()
 
 void DistributionFactory::proceed()
 {
-    if (DIM3 == ctx.dim)
+    if (dimension::DIM3 == ctx.dim)
         ((TH3*)hSignalCounter)->Fill(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.z.get_var(), *ctx.var_weight);
 
-    if (DIM2 == ctx.dim) ((TH2*)hSignalCounter)->Fill(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.var_weight);
+    if (dimension::DIM2 == ctx.dim) ((TH2*)hSignalCounter)->Fill(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.var_weight);
 
-    if (DIM1 == ctx.dim) ((TH1*)hSignalCounter)->Fill(*ctx.x.get_var(), *ctx.var_weight);
-
-    if (DIM0 == ctx.dim) ((TH1*)hSignalCounter)->Fill(*ctx.x.get_var(), *ctx.var_weight);
+    if (dimension::DIM1 == ctx.dim) ((TH1*)hSignalCounter)->Fill(*ctx.x.get_var(), *ctx.var_weight);
 
     // 	if (ctx.useClip() and
     // 			*ctx.x.get_var() > ctx.cx.min and *ctx.x.get_var() < ctx.cx.max and
@@ -245,14 +233,13 @@ void DistributionFactory::prepareCanvas(const char* draw_opts)
     TString coltopts = "col,text";
 
     hSignalCounter->GetXaxis()->SetTitle(ctx.x.format_string());
-    if (DIM0 == ctx.dim) { hSignalCounter->GetYaxis()->SetTitle(ctx.axis_text.Data()); }
-    else if (DIM1 == ctx.dim) { hSignalCounter->GetYaxis()->SetTitle(ctx.axis_text.Data()); }
-    else if (DIM2 == ctx.dim)
+    if (dimension::DIM1 == ctx.dim) { hSignalCounter->GetYaxis()->SetTitle(ctx.axis_text.Data()); }
+    else if (dimension::DIM2 == ctx.dim)
     {
         hSignalCounter->GetYaxis()->SetTitle(ctx.y.format_string());
         hSignalCounter->GetZaxis()->SetTitle(ctx.axis_text.Data());
     }
-    else if (DIM3 == ctx.dim)
+    else if (dimension::DIM3 == ctx.dim)
     {
         hSignalCounter->GetYaxis()->SetTitle(ctx.y.format_string());
         hSignalCounter->GetZaxis()->SetTitle(ctx.z.format_string());

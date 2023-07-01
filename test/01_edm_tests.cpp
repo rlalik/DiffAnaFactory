@@ -44,9 +44,9 @@ void BasicCase::setUp()
 
     axis.set_bins(20, -3, 3);
 
-    edm1 = new midas::ExtraDimensionMapper(midas::DIM1, "edm1", h1, axis, "edm1");
-    edm2 = new midas::ExtraDimensionMapper(midas::DIM2, "edm2", h2, axis, "edm2");
-    edm3 = new midas::ExtraDimensionMapper(midas::DIM3, "edm3", h3, axis, "edm3");
+    edm1 = new midas::ExtraDimensionMapper(midas::dimension::DIM1, "edm1", h1, axis, "edm1");
+    edm2 = new midas::ExtraDimensionMapper(midas::dimension::DIM2, "edm2", h2, axis, "edm2");
+    edm3 = new midas::ExtraDimensionMapper(midas::dimension::DIM3, "edm3", h3, axis, "edm3");
 }
 
 void BasicCase::tearDown()

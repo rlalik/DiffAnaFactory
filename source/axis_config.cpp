@@ -52,7 +52,7 @@ auto axis_config::format_unit(const TString& unit) -> TString
 auto axis_config::print() const -> void
 {
     if (!bins_arr)
-        printf(" Axis: %d bins in [ %f; %f ] range -- %s\n", bins, min, max, format_string().Data());
+        printf(" Axis: %d bins in [ %g; %g ] range -- %s\n", bins, min, max, format_string().Data());
     else
     {
         TString buff;

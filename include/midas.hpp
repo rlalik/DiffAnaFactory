@@ -28,6 +28,8 @@
 #include <TNamed.h>
 #include <TString.h>
 
+#include <stdexcept>
+
 class TH1;
 class TH1D;
 class TH2;
@@ -42,6 +44,13 @@ class fitter;
 
 namespace midas
 {
+
+// Thrown when the dimension is incorrect
+class dimension_error : public std::runtime_error
+{
+public:
+    using std::runtime_error::runtime_error;
+};
 
 class MIDAS_EXPORT axis_config final
 {
@@ -107,29 +116,33 @@ public:
 private:
     TString label; // label for the axis
     TString unit;  // unit for the axis
-    // TString title;     // title for the axis
+    // TString title;   // title for the axis
     Float_t* var;      //!	here is the address of the variable which is used to fill data
     UInt_t bins;       // number of bins
     Float_t min;       // minimum axis value
     Float_t max;       // maximum axis value
     Float_t* bins_arr; //! here one can put custom bins division array
-    Float_t delta;     // CAUTION: overriden by validate(), do not set by hand
+    Float_t delta;     //! CAUTION: overriden by validate(), do not set by hand
 
     // ClassDef(axis_config, 1);
 };
 
-enum dimension
+enum class dimension
 {
-    NOINIT,
-    DIM0,
+    NODIM,
     DIM1,
     DIM2,
     DIM3
 };
 
+class DistributionFactory;
+class DifferentialFactory;
+class ExtraDimensionMapper;
+class v_context;
+
 class MIDAS_EXPORT context : public TNamed
 {
-public:
+protected:
     dimension dim; // define dimension
     // config
     mutable TString name; // prefix for histograms
@@ -142,7 +155,7 @@ public:
     TString unit;
     TString axis_text;
 
-    axis_config x, y, z; // x, y are two dimensions, V is a final Variable axis
+    axis_config x, y, z; // x..z are dimensions, V is an observable variable axis
 
     // cut range when useCut==kTRUE
     // 	Double_t cutMin;			// Cut: min
@@ -152,14 +165,38 @@ public:
     Float_t* var_weight; //!
     // variable used for cuts when cutCut==kTRUE
 
+protected:
     context();
-    context(dimension dim);
+
+public:
+    context(TString name, dimension dim);
+    context(TString name, axis_config x);
+    context(TString name, axis_config x, axis_config y);
+    context(TString name, axis_config x, axis_config y, axis_config z);
     context(const context& ctx);
     virtual ~context();
 
-    context& operator=(const context& ctx);
+    context& operator=(const context& ctx) = default;
     bool operator==(const context& ctx);
     bool operator!=(const context& ctx);
+
+    auto cast(dimension dim) const -> context;
+    auto reduce() -> void;
+    auto extend() -> axis_config&;
+    auto extend(axis_config next_dim) -> void;
+
+    auto get_x() -> axis_config&;
+    auto get_y() -> axis_config&;
+    auto get_z() -> axis_config&;
+
+    [[nodiscard]] auto expand(axis_config extra_dim) -> v_context;
+
+    // auto get_dimension() const -> dimension { return dim; }
+    // auto get_name() const -> const TString { return name; }
+    auto get_title() const -> const TString { return title; }
+    auto get_label() const -> const TString& { return label; }
+    // auto get_unit() const -> const TString& { return unit; }
+    // auto get_axis_text() const -> const TString& { return axis_text; }
 
     virtual bool update();
     virtual int validate() const;
@@ -179,21 +216,36 @@ protected:
     TString json_fn;
     bool json_found;
 
+    friend DistributionFactory;
+    friend DifferentialFactory;
+
     // ClassDef(distribution_context, 1);
 };
 
 class MIDAS_EXPORT v_context : public context
 {
-public:
-    axis_config V; // x, y are two dimensions, V is a final Variable axis
+protected:
+    axis_config v; // x, y are two dimensions, V is a final Variable axis
 
+public:
     v_context();
+    v_context(TString name, dimension dim) : context(name, dim) {} // FIXME to be removed
+    v_context(TString name, dimension dim, axis_config v) : context(name, dim), v(std::move(v)) {}
+
+    v_context(TString name, axis_config x, axis_config v);
+    v_context(TString name, axis_config x, axis_config y, axis_config v);
+    v_context(TString name, axis_config x, axis_config y, axis_config z, axis_config v);
+    v_context(const context& ctx);
     v_context(const v_context& ctx);
     virtual ~v_context();
 
+    v_context& operator=(const context& ctx);
     v_context& operator=(const v_context& ctx);
     bool operator==(const v_context& ctx);
     bool operator!=(const v_context& ctx);
+
+    auto get_v() -> axis_config& { return v; }
+    auto get_v() const -> const axis_config& { return v; }
 
     // flags
     // 	virtual bool useCuts() const { return (cutMin or cutMax); }
@@ -205,6 +257,10 @@ public:
 
 private:
     TString json_fn;
+
+    friend DifferentialFactory;
+    friend ExtraDimensionMapper;
+
     // ClassDef(DifferentialContext, 2);
 };
 

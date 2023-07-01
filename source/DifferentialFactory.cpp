@@ -95,10 +95,8 @@ void DifferentialFactory::init()
 
 void DifferentialFactory::init_diffs()
 {
-    if (DIM0 == ctx.dim) return;
-
     diffs =
-        new ExtraDimensionMapper(ctx.dim, ctx.name.Data(), hSignalCounter, ctx.V, "@@@d/diffs/%c_@@@a_Signal", this);
+        new ExtraDimensionMapper(ctx.dim, ctx.name.Data(), hSignalCounter, ctx.v, "@@@d/diffs/%c_@@@a_Signal", this);
 }
 
 void DifferentialFactory::reinit()
@@ -145,8 +143,8 @@ TString hname, htitle, cname;
 // 					ctx.cy.min+ctx.cy.delta*j,
 // 					ctx.cy.min+ctx.cy.delta*(j+1));
 //
-// 					hDiscreteXYDiff[i][j] = RegTH1<TH1D>(hname, htitle, ctx.V.bins, ctx.V.min,
-// ctx.V.max);
+// 					hDiscreteXYDiff[i][j] = RegTH1<TH1D>(hname, htitle, ctx.v.bins, ctx.v.min,
+// ctx.v.max);
 //
 // 					objectsDiffs->AddLast(hDiscreteXYDiff[i][j]);
 // 			}
@@ -163,24 +161,24 @@ TString hname, htitle, cname;
 void DifferentialFactory::proceed()
 {
     DistributionFactory::proceed();
-    if (DIM3 == ctx.dim)
-        diffs->Fill3D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.z.get_var(), *ctx.V.get_var(), *ctx.var_weight);
-    else if (DIM2 == ctx.dim)
-        diffs->Fill2D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.V.get_var(), *ctx.var_weight);
-    else if (DIM1 == ctx.dim)
-        diffs->Fill1D(*ctx.x.get_var(), *ctx.V.get_var(), *ctx.var_weight);
+    if (dimension::DIM3 == ctx.dim)
+        diffs->Fill3D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.z.get_var(), *ctx.v.get_var(), *ctx.var_weight);
+    else if (dimension::DIM2 == ctx.dim)
+        diffs->Fill2D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.v.get_var(), *ctx.var_weight);
+    else if (dimension::DIM1 == ctx.dim)
+        diffs->Fill1D(*ctx.x.get_var(), *ctx.v.get_var(), *ctx.var_weight);
 }
 
-void DifferentialFactory::proceed1() { diffs->Fill1D(*ctx.x.get_var(), *ctx.V.get_var(), *ctx.var_weight); }
+void DifferentialFactory::proceed1() { diffs->Fill1D(*ctx.x.get_var(), *ctx.v.get_var(), *ctx.var_weight); }
 
 void DifferentialFactory::proceed2()
 {
-    diffs->Fill2D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.V.get_var(), *ctx.var_weight);
+    diffs->Fill2D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.v.get_var(), *ctx.var_weight);
 }
 
 void DifferentialFactory::proceed3()
 {
-    diffs->Fill3D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.z.get_var(), *ctx.V.get_var(), *ctx.var_weight);
+    diffs->Fill3D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.z.get_var(), *ctx.v.get_var(), *ctx.var_weight);
 }
 
 void DifferentialFactory::binnorm() { DistributionFactory::binnorm(); }
@@ -269,8 +267,6 @@ void DifferentialFactory::niceSlices(float mt, float mr, float mb, float ml, int
 
 void DifferentialFactory::prepareDiffCanvas()
 {
-    if (DIM0 == ctx.dim) return;
-
     TLatex* latex = new TLatex();
     latex->SetNDC();
     latex->SetTextSize(0.07);
@@ -291,11 +287,11 @@ void DifferentialFactory::prepareDiffCanvas()
         TH1* h = diffs->get(bx, by, bz);
         h->Draw();
         int pad_number = 0;
-        if (ctx.dim == DIM1)
+        if (ctx.dim == dimension::DIM1)
             pad_number = bx;
-        else if (ctx.dim == DIM2)
+        else if (ctx.dim == dimension::DIM2)
             pad_number = by;
-        else if (ctx.dim == DIM3)
+        else if (ctx.dim == dimension::DIM3)
             pad_number = bz;
 
         latex->DrawLatex(0.12, 0.85, TString::Format("%02d", pad_number));
@@ -371,8 +367,6 @@ void DifferentialFactory::prepareDiffCanvas()
 void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, hf::fitter& hf, hf::fit_entry& stdfit,
                                        bool integral_only)
 {
-    if (DIM0 == ctx.dim) return;
-
     // 	FitResultData res;
     bool res;
 
@@ -392,17 +386,17 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, hf::fitter& 
         for (UInt_t by = 0; (by < ly && ly > 0) || by == 0; ++by)
             for (UInt_t bz = 0; (bz < lz && lz > 0) || bz == 0; ++bz)
             {
-                if (ctx.dim == DIM3)
+                if (ctx.dim == dimension::DIM3)
                 {
                     can = diffs->getCanvas(bx, by);
                     pad = can->cd(bz + 1);
                 }
-                else if (ctx.dim == DIM2)
+                else if (ctx.dim == dimension::DIM2)
                 {
                     can = diffs->getCanvas(bx);
                     pad = can->cd(by + 1);
                 }
-                else if (ctx.dim == DIM1)
+                else if (ctx.dim == dimension::DIM1)
                 {
                     can = diffs->getCanvas(0);
                     pad = can->cd(bx + 1);

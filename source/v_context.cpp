@@ -41,6 +41,19 @@ v_context::v_context()
     // variable used for cuts when cutCut==kTRUE
 }
 
+v_context::v_context(TString name, axis_config x, axis_config v) : context(name, x), v(std::move(v)) {}
+
+v_context::v_context(TString name, axis_config x, axis_config y, axis_config v) : context(name, x, y), v(std::move(v))
+{
+}
+
+v_context::v_context(TString name, axis_config x, axis_config y, axis_config z, axis_config v)
+    : context(name, x, y, z), v(std::move(v))
+{
+}
+
+v_context::v_context(const context& ctx) : context(ctx) {}
+
 v_context::v_context(const v_context& ctx) : context(ctx)
 {
     *this = ctx;
@@ -84,7 +97,7 @@ bool v_context::configureFromJson(const char* name)
 
     const size_t axis_num = 3;
     const char* axis_labels[axis_num] = {"x", "y", "V"};
-    axis_config* axis_ptrs[axis_num] = {&x, &y, &V};
+    axis_config* axis_ptrs[axis_num] = {&x, &y, &v};
 
     for (uint i = 0; i < axis_num; ++i)
     {
@@ -155,13 +168,22 @@ bool v_context::configureToJson(const char* name, const char* jsonfile)
     return true;
 }
 
+v_context& v_context::operator=(const context& ctx)
+{
+    if (this == &ctx) return *this;
+    // 	histPrefix = ctx.histPrefix;
+    *this = ctx;
+
+    return *this;
+}
+
 v_context& v_context::operator=(const v_context& ctx)
 {
     if (this == &ctx) return *this;
     // 	histPrefix = ctx.histPrefix;
     context::operator=(ctx);
     name = ctx.name;
-    V = ctx.V;
+    v = ctx.v;
 
     return *this;
 }
@@ -171,7 +193,7 @@ bool v_context::operator==(const v_context& ctx)
     bool res = (context) * this == (context)ctx;
     if (!res) return false;
 
-    if (this->V != ctx.V)
+    if (this->v != ctx.v)
     {
         // fprintf(stderr, "Different number of z bins: %d vs %d\n", this->V.bins, ctx.V.bins); FIXME
         return false;
@@ -185,7 +207,7 @@ bool v_context::operator!=(const v_context& ctx) { return !operator==(ctx); }
 void v_context::print() const
 {
     context::print();
-    V.print();
+    v.print();
     printf(" label: %s  unit: %s\n", label.Data(), unit.Data());
 }
 

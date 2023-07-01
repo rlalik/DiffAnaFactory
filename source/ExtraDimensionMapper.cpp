@@ -45,11 +45,11 @@ ExtraDimensionMapper::ExtraDimensionMapper(dimension dim, const std::string& nam
     nhists = nbins_x * nbins_y * nbins_z;
 
     histograms = new TH1D*[nhists];
-    if (DIM1 == dim)
+    if (dimension::DIM1 == dim)
         map1D(axis);
-    else if (DIM2 == dim)
+    else if (dimension::DIM2 == dim)
         map2D(axis);
-    else if (DIM3 == dim)
+    else if (dimension::DIM3 == dim)
         map3D(axis);
 
     //   objectsFits = new TObjArray();
@@ -73,11 +73,11 @@ ExtraDimensionMapper::ExtraDimensionMapper(dimension dim, const std::string& nam
     rename(sf->objects_name().c_str());
 
     histograms = new TH1D*[nhists];
-    if (DIM1 == dim)
+    if (dimension::DIM1 == dim)
         map1D(axis);
-    else if (DIM2 == dim)
+    else if (dimension::DIM2 == dim)
         map2D(axis);
-    else if (DIM3 == dim)
+    else if (dimension::DIM3 == dim)
         map3D(axis);
 
     //   objectsFits = new TObjArray();
@@ -97,7 +97,7 @@ UInt_t ExtraDimensionMapper::getBin(UInt_t x, UInt_t y, UInt_t z) const
 
 bool ExtraDimensionMapper::reverseBin(UInt_t bin, UInt_t& x) const
 {
-    if (dim != DIM1) return false;
+    if (dim != dimension::DIM1) return false;
     if (bin >= nhists) return false;
     x = bin % nbins_x;
     return true;
@@ -105,12 +105,12 @@ bool ExtraDimensionMapper::reverseBin(UInt_t bin, UInt_t& x) const
 
 bool ExtraDimensionMapper::reverseBin(UInt_t bin, UInt_t& x, UInt_t& y) const
 {
-    if (dim < DIM2)
+    if (dim < dimension::DIM2)
     {
         y = 0;
         return reverseBin(bin, x);
     }
-    if (dim != DIM2) return false;
+    if (dim != dimension::DIM2) return false;
     if (bin >= nhists) return false;
     x = bin % nbins_x;
     y = bin / nbins_x;
@@ -119,12 +119,12 @@ bool ExtraDimensionMapper::reverseBin(UInt_t bin, UInt_t& x, UInt_t& y) const
 
 bool ExtraDimensionMapper::reverseBin(UInt_t bin, UInt_t& x, UInt_t& y, UInt_t& z) const
 {
-    if (dim < DIM3)
+    if (dim < dimension::DIM3)
     {
         z = 0;
         return reverseBin(bin, x, y);
     }
-    if (dim != DIM3) return false;
+    if (dim != dimension::DIM3) return false;
     if (bin >= nhists) return false;
     x = bin % nbins_x;
     y = (bin / nbins_x) % nbins_y;
@@ -218,11 +218,11 @@ void ExtraDimensionMapper::formatName(char* buff, UInt_t x, UInt_t y, UInt_t z)
     char name[200];
     sprintf(name, prefix_name.c_str(), 'h');
 
-    if (DIM1 == dim)
+    if (dimension::DIM1 == dim)
         sprintf(buff, "%s_X%02d", name, x);
-    else if (DIM2 == dim)
+    else if (dimension::DIM2 == dim)
         sprintf(buff, "%s_X%02d_Y%02d", name, x, y);
-    else if (DIM3 == dim)
+    else if (dimension::DIM3 == dim)
         sprintf(buff, "%s_X%02d_Y%02d_Z%02d", name, x, y, z);
 }
 
@@ -230,11 +230,11 @@ void ExtraDimensionMapper::formatCanvasName(char* buff, UInt_t x, UInt_t y)
 {
     char name[200];
     sprintf(name, prefix_name.c_str(), 'c');
-    if (DIM1 == dim)
+    if (dimension::DIM1 == dim)
         sprintf(buff, "%s", name);
-    else if (DIM2 == dim)
+    else if (dimension::DIM2 == dim)
         sprintf(buff, "%s_X%02d", name, x);
-    else if (DIM3 == dim)
+    else if (dimension::DIM3 == dim)
         sprintf(buff, "%s_X%02d_Y%02d", name, x, y);
 }
 
@@ -263,13 +263,13 @@ TH1D* ExtraDimensionMapper::get(UInt_t x, UInt_t y, UInt_t z)
 
 TCanvas* ExtraDimensionMapper::getCanvas(UInt_t x, UInt_t y)
 {
-    if (DIM3 == dim)
+    if (dimension::DIM3 == dim)
     {
         if (x >= nbins_x or y >= nbins_y) return nullptr;
 
         return canvases[x + y * nbins_x];
     }
-    if (DIM2 == dim)
+    if (dimension::DIM2 == dim)
     {
         if (x >= nbins_x) return nullptr;
 
@@ -283,9 +283,9 @@ TVirtualPad* ExtraDimensionMapper::getPad(UInt_t x, UInt_t y, UInt_t z)
 {
     TCanvas* can = getCanvas(x, y);
 
-    if (DIM3 == dim) return can->GetPad(1 + z);
-    if (DIM2 == dim) return can->GetPad(1 + y);
-    if (DIM1 == dim) return can->GetPad(1 + x);
+    if (dimension::DIM3 == dim) return can->GetPad(1 + z);
+    if (dimension::DIM2 == dim) return can->GetPad(1 + y);
+    if (dimension::DIM1 == dim) return can->GetPad(1 + x);
 
     return can->GetPad(0);
 }

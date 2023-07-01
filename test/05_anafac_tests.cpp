@@ -37,7 +37,7 @@ CPPUNIT_TEST_SUITE_REGISTRATION(AnaFacCase);
 
 void AnaFacCase::setUp()
 {
-    a3ctx.dim = midas::DIM3;
+    a3ctx = midas::v_context(midas::dimension::DIM3);
     a3ctx.x.set_bins(4, -10, 10).set_label("a3_x").set_unit("cm");
     a3ctx.y.set_bins(3, -10, 10).set_label("a3_y").set_unit("mm");
     a3ctx.z.set_bins(2, -10, 10).set_label("a3_z").set_unit("um");
@@ -45,7 +45,7 @@ void AnaFacCase::setUp()
 
     a2ctx = a3ctx;
 
-    a2ctx.dim = midas::DIM2;
+    a2ctx = midas::v_context(midas::dimension::DIM2); // FIXME
     a2ctx.name = "a2fac";
     a2ctx.hist_name = "a2fac";
 
