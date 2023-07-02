@@ -71,10 +71,9 @@ add_library(
     source/axis_config.cpp
     source/context.cpp
     source/v_context.cpp
-    source/DistributionFactory.cpp
+    source/distribution.cpp
     source/DifferentialFactory.cpp
     source/observable.cpp
-    source/MultiDimAnalysisContext.cpp
     source/detail.cpp
 )
 add_library(Midas::Midas ALIAS Midas)

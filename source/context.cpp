@@ -55,11 +55,11 @@ context::context(TString context_name, axis_config x_axis, axis_config y_axis, a
 {
 }
 
-context::context(const context& ctx) { *this = ctx; }
-
-auto context::cast(dimension new_dim) const -> context
+auto context::cast(TString new_name, dimension new_dim) const -> context
 {
-    context new_ctx;
+    context new_ctx = *this;
+    new_ctx.name = new_name;
+    new_ctx.dim = new_dim;
     return new_ctx;
 }
 
@@ -143,8 +143,6 @@ int context::validate() const
     return 0;
     // 	return update();
 }
-
-context::~context() {}
 
 bool context::configureFromJson(const char* ctx_name)
 {

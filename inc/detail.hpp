@@ -89,6 +89,8 @@ constexpr auto dim_to_int(dimension dim) -> int
     }
 }
 
+auto copyHistogram(TH1* src, TH1* dst, bool with_functions = true) -> bool;
+
 auto jsonReadTStringKey(const Json::Value& jsondata, const char* key, TString& target) -> bool;
 auto jsonReadIntKey(const Json::Value& jsondata, const char* key, int& target) -> bool;
 auto jsonReadUIntKey(const Json::Value& jsondata, const char* key, uint& target) -> bool;

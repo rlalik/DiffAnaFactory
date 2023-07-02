@@ -38,23 +38,23 @@ const Option_t h1opts[] = "h,E1";
 const TString flags_fit_a = "B,Q,0";
 const TString flags_fit_b = "";
 
-DifferentialFactory::DifferentialFactory() : DistributionFactory(), ctx(v_context()), diffs(nullptr)
+DifferentialFactory::DifferentialFactory() : distribution(), ctx(v_context()), diffs(nullptr)
 {
-    DistributionFactory::prepare();
+    distribution::prepare();
     DifferentialFactory::prepare();
 }
 
 DifferentialFactory::DifferentialFactory(const v_context& context)
-    : DistributionFactory(context), ctx(context), diffs(nullptr)
+    : distribution(context), ctx(context), diffs(nullptr)
 {
-    DistributionFactory::prepare();
+    distribution::prepare();
     DifferentialFactory::prepare();
 }
 
 DifferentialFactory::DifferentialFactory(const v_context* context)
-    : DistributionFactory(context), ctx(*context), diffs(nullptr)
+    : distribution(context), ctx(*context), diffs(nullptr)
 {
-    DistributionFactory::prepare();
+    distribution::prepare();
     DifferentialFactory::prepare();
 }
 
@@ -62,7 +62,7 @@ DifferentialFactory::~DifferentialFactory()
 {
     // 	gSystem->ProcessEvents();
 }
-
+/*
 DifferentialFactory& DifferentialFactory::operator=(const DifferentialFactory& fa)
 {
     if (this == &fa) return *this;
@@ -70,14 +70,14 @@ DifferentialFactory& DifferentialFactory::operator=(const DifferentialFactory& f
     // 	nthis->objectsFits = new TObjArray();
     // 	nthis->objectsFits->SetName(ctx.name + "Fits");
 
-    static_cast<DistributionFactory>(*this) = static_cast<DistributionFactory>(fa);
+    static_cast<distribution>(*this) = static_cast<distribution>(fa);
     if (!diffs) return *this;
 
     for (int i = 0; i < diffs->nhists; ++i)
-        copyHistogram((*fa.diffs)[i], (*diffs)[i]);
+        detail::copyHistogram((*fa.diffs)[i], (*diffs)[i]);
 
     return *this;
-}
+}*/
 
 void DifferentialFactory::prepare()
 {
@@ -88,20 +88,20 @@ void DifferentialFactory::prepare()
 
 void DifferentialFactory::init()
 {
-    DistributionFactory::init();
+    distribution::init();
 
     init_diffs();
 }
 
 void DifferentialFactory::init_diffs()
 {
-    diffs = new observable(ctx.dim, ctx.name.Data(), hSignalCounter, ctx.v, "@@@d/diffs/%c_@@@a_Signal", this);
+    diffs = new observable(ctx.dim, ctx.name.Data(), hSignalCounter.get(), ctx.v, "@@@d/diffs/%c_@@@a_Signal", this);
 }
 
 void DifferentialFactory::reinit()
 {
-    DistributionFactory::ctx = static_cast<context>(ctx);
-    DistributionFactory::reinit();
+    distribution::ctx = static_cast<context>(ctx);
+    distribution::reinit();
 
     if (diffs)
     {
@@ -159,7 +159,7 @@ TString hname, htitle, cname;
 
 void DifferentialFactory::proceed()
 {
-    DistributionFactory::proceed();
+    distribution::proceed();
     if (dimension::DIM3 == ctx.dim)
         diffs->Fill3D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.z.get_var(), *ctx.v.get_var(), *ctx.var_weight);
     else if (dimension::DIM2 == ctx.dim)
@@ -180,11 +180,11 @@ void DifferentialFactory::proceed3()
     diffs->Fill3D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.z.get_var(), *ctx.v.get_var(), *ctx.var_weight);
 }
 
-void DifferentialFactory::binnorm() { DistributionFactory::binnorm(); }
-
+void DifferentialFactory::binnorm() { distribution::binnorm(); }
+/*
 void DifferentialFactory::scale(Float_t factor)
 {
-    DistributionFactory::scale(factor);
+    distribution::scale(factor);
 
     if (diffs)
     {
@@ -195,7 +195,7 @@ void DifferentialFactory::scale(Float_t factor)
             // 				if (hSliceXYDiff) hSliceXYDiff[i]->Scale(factor);
         }
     }
-}
+}*/
 
 // void DifferentialFactory::finalize(bool flag_details)
 // {
@@ -205,12 +205,12 @@ void DifferentialFactory::scale(Float_t factor)
 // TODO this two should be moved somewhere else, not in library
 void DifferentialFactory::applyAngDists(double a2, double a4, double corr_a2, double corr_a4)
 {
-    DistributionFactory::applyAngDists(a2, a4, corr_a2, corr_a4);
+    distribution::applyAngDists(a2, a4, corr_a2, corr_a4);
     if (diffs)
     {
         for (int i = 0; i < diffs->getNHists(); ++i)
         {
-            DistributionFactory::applyAngDists(dynamic_cast<TH1*>((*diffs)[i]), a2, a4, corr_a2, corr_a4);
+            distribution::applyAngDists(dynamic_cast<TH1*>((*diffs)[i]), a2, a4, corr_a2, corr_a4);
         }
     }
 }
@@ -218,18 +218,18 @@ void DifferentialFactory::applyAngDists(double a2, double a4, double corr_a2, do
 // TODO move away
 void DifferentialFactory::applyBinomErrors(TH1* N)
 {
-    DistributionFactory::applyBinomErrors(N);
+    distribution::applyBinomErrors(N);
     // FIXME do it for diffs ?
 }
 
 bool DifferentialFactory::write(const char* filename, bool verbose)
 {
-    return DistributionFactory::write(filename, verbose) && diffs ? diffs->write(filename, verbose) : true;
+    return distribution::write(filename, verbose) && diffs ? diffs->write(filename, verbose) : true;
 }
 
 bool DifferentialFactory::write(TFile* f, bool verbose)
 {
-    return DistributionFactory::write(f, verbose) && diffs ? diffs->write(f, verbose) : true;
+    return distribution::write(f, verbose) && diffs ? diffs->write(f, verbose) : true;
 }
 
 void DifferentialFactory::niceDiffs(float mt, float mr, float mb, float ml, int ndivx, int ndivy, float xls, float xts,
@@ -376,7 +376,7 @@ void DifferentialFactory::prepareDiffCanvas()
     }
 }
 
-void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, hf::fitter& hf, hf::fit_entry& stdfit,
+void DifferentialFactory::fitDiffHists(distribution* sigfac, hf::fitter& hf, hf::fit_entry& stdfit,
                                        bool integral_only)
 {
     // 	FitResultData res;
@@ -541,7 +541,7 @@ void DifferentialFactory::fitDiffHists(DistributionFactory* sigfac, hf::fitter& 
 
     if (!sigfac) return;
 
-    RT::NicePalette(dynamic_cast<TH2*>(sigfac->hSignalCounter), 0.05f);
+    RT::NicePalette(dynamic_cast<TH2*>(sigfac->hSignalCounter.get()), 0.05f);
 
     printf("Raw/fine binning counts:  %f / %f  for %s\n", sigfac->hSignalCounter->Integral(),
            sigfac->hSignalCounter->Integral(), ctx.hist_name.Data());
@@ -585,19 +585,19 @@ bool DifferentialFactory::fitDiffHist(TH1* hist, hf::fit_entry* hfp, double min_
 
 void DifferentialFactory::rename(const char* newname)
 {
-    DistributionFactory::rename(newname);
+    distribution::rename(newname);
     if (diffs) diffs->rename(newname);
 }
 
 void DifferentialFactory::chdir(const char* newdir)
 {
-    DistributionFactory::chdir(newdir);
+    distribution::chdir(newdir);
     if (diffs) diffs->chdir(newdir);
 }
 
 void DifferentialFactory::reset()
 {
-    DistributionFactory::reset();
+    distribution::reset();
     if (diffs) diffs->reset();
 }
 

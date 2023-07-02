@@ -6,6 +6,7 @@ find_or_fetch_package(GTest https://github.com/google/googletest GIT_TAG release
 set(tests_SRCS tests_axis_config.cpp
                tests_context.cpp
                tests_v_context.cpp
+               tests_distribution.cpp
                tests_observable.cpp)
 
 add_executable(gtests ${tests_SRCS})

@@ -28,6 +28,7 @@
 #include <TNamed.h>
 #include <TString.h>
 
+#include <functional>
 #include <stdexcept>
 
 class TH1;
@@ -138,7 +139,7 @@ enum class dimension
     DIM3
 };
 
-class DistributionFactory;
+class distribution;
 class DifferentialFactory;
 class observable;
 class v_context;
@@ -175,14 +176,17 @@ public:
     context(TString context_name, axis_config x_axis);
     context(TString context_name, axis_config x_axis, axis_config y_axis);
     context(TString context_name, axis_config x_axis, axis_config y_axis, axis_config z_axis);
-    context(const context& ctx);
-    virtual ~context();
+    context(const context&) = default;
+    context(context&&) = default;
+    virtual ~context() = default;
 
-    context& operator=(const context& ctx) = default;
+    context& operator=(const context&) = default;
+    context& operator=(context&&) = default;
+
     bool operator==(const context& ctx);
     bool operator!=(const context& ctx);
 
-    auto cast(dimension new_dim) const -> context;
+    auto cast(TString new_name, dimension new_dim) const -> context;
     auto reduce() -> void;
     auto extend() -> axis_config&;
     auto extend(axis_config next_dim) -> void;
@@ -194,7 +198,7 @@ public:
     [[nodiscard]] auto expand(axis_config extra_dim) -> v_context;
 
     // auto get_dimension() const -> dimension { return dim; }
-    // auto get_name() const -> const TString { return name; }
+    auto get_name() const -> const TString { return name; }
     auto get_title() const -> const TString { return context_title; }
     auto get_label() const -> const TString& { return context_label; }
     // auto get_unit() const -> const TString& { return unit; }
@@ -206,8 +210,6 @@ public:
     virtual void format_diff_axis();
     virtual TString format_hist_axes(const char* title = nullptr) const;
 
-    virtual const char* AnaName() const { return name.Data(); }
-
     virtual bool findJsonFile(const char* initial_path, const char* filename, int search_depth = -1);
     virtual bool configureFromJson(const char* name);
     virtual bool configureToJson(const char* name, const char* jsonfile);
@@ -218,7 +220,7 @@ protected:
     TString json_fn;
     bool json_found;
 
-    friend DistributionFactory;
+    friend distribution;
     friend DifferentialFactory;
 
     // ClassDef(distribution_context, 1);
@@ -267,23 +269,30 @@ private:
     // ClassDef(DifferentialContext, 2);
 };
 
-class MIDAS_EXPORT DistributionFactory : public TObject, public RT::Pandora
+class MIDAS_EXPORT distribution : public TObject, public RT::Pandora
 {
+protected:
+    distribution();
+
 public:
-    DistributionFactory();
-    DistributionFactory(const context& ctx);
-    DistributionFactory(const context* ctx);
-    virtual ~DistributionFactory();
+    distribution(const context& ctx);
+    distribution(const context* ctx);
+    distribution(const distribution&) = delete;
+    distribution(distribution&&) = default;
+    virtual ~distribution();
 
-    DistributionFactory& operator=(const DistributionFactory& fa);
+    distribution& operator=(const distribution& fa) = delete;
+    distribution& operator=(distribution&&) = default;
 
-    virtual void init();
     virtual void reinit();
     virtual void proceed();
     virtual void finalize(const char* draw_opts = nullptr);
 
+    auto transform(std::function<void(TH1 * h)> transform_function) -> void;
+    auto transform(std::function<void(TCanvas * h)> transform_function) -> void;
+
     virtual void binnorm();
-    virtual void scale(Float_t factor);
+    // virtual void scale(Float_t factor);
 
     static void niceHisto(TVirtualPad* pad, TH1* hist, float mt, float mr, float mb, float ml, int ndivx, int ndivy,
                           float xls, float xts, float xto, float yls, float yts, float yto, bool centerY = false,
@@ -304,8 +313,12 @@ public:
 
     void setDrawOptions(const char* draw_opts) { drawOpts = draw_opts; }
 
+    auto print() const -> void;
+
 protected:
     virtual void prepare();
+    virtual void init();
+
     virtual void rename(const char* newname);
     virtual void chdir(const char* newdir);
 
@@ -317,8 +330,8 @@ public:
     // #else
     // 	TH2D * hSignalCounter;			//->	// discrete X-Y, signal extracted
     // #endif
-    TH1* hSignalCounter;     //->	// discrete X-Y, signal extracted
-    TCanvas* cSignalCounter; //->
+    std::unique_ptr<TH1> hSignalCounter;     //->	// discrete X-Y, signal extracted
+    std::unique_ptr<TCanvas> cSignalCounter; //->
 
     // 	TCanvas * cDiscreteXYSig;		//->
     // 	TCanvas * cDiscreteXYSigFull;	//->
@@ -331,18 +344,21 @@ protected:
 
 class DifferentialFactory;
 
-typedef void(FitCallback)(DifferentialFactory* fac, DistributionFactory* sigfac, int fit_res, TH1* h, int x_pos,
-                          int y_pos, int z_pos);
+typedef void(FitCallback)(DifferentialFactory* fac, distribution* sigfac, int fit_res, TH1* h, int x_pos, int y_pos,
+                          int z_pos);
 
-class MIDAS_EXPORT DifferentialFactory : public DistributionFactory
+class MIDAS_EXPORT DifferentialFactory : public distribution
 {
 public:
     DifferentialFactory();
     DifferentialFactory(const v_context& ctx);
     DifferentialFactory(const v_context* ctx);
+    DifferentialFactory(const DifferentialFactory&) = delete;
+    DifferentialFactory(DifferentialFactory&&) = delete;
     virtual ~DifferentialFactory();
 
-    DifferentialFactory& operator=(const DifferentialFactory& fa);
+    DifferentialFactory& operator=(const DifferentialFactory& fa) = delete;
+    DifferentialFactory& operator=(DifferentialFactory&& fa) = delete;
 
     // 	void getDiffs(bool with_canvases = true);
 
@@ -355,7 +371,7 @@ public:
     virtual void reset();
 
     virtual void binnorm();
-    virtual void scale(Float_t factor);
+    // virtual void scale(Float_t factor);
 
     virtual void applyAngDists(double a2, double a4, double corr_a2 = 0.0, double corr_a4 = 0.0);
 
@@ -369,7 +385,7 @@ public:
     void niceSlices(float mt, float mr, float mb, float ml, int ndivx, int ndivy, float xls, float xts, float xto,
                     float yls, float yts, float yto, bool centerY = false, bool centerX = false);
 
-    void fitDiffHists(DistributionFactory* sigfac, hf::fitter& hf, hf::fit_entry& stdfit, bool integral_only = false);
+    void fitDiffHists(distribution* sigfac, hf::fitter& hf, hf::fit_entry& stdfit, bool integral_only = false);
     bool fitDiffHist(TH1* hist, hf::fit_entry* hfp, double min_entries = 0);
 
     void setFitCallback(FitCallback* cb) { fitCallback = cb; }
@@ -396,8 +412,6 @@ private:
 
     // ClassDef(DifferentialFactory, 1);
 };
-
-bool copyHistogram(TH1* src, TH1* dst, bool with_functions = true);
 
 }; // namespace midas
 

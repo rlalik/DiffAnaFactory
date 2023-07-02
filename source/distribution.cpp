@@ -18,7 +18,11 @@
 
 #include "midas.hpp"
 
+#include "detail.hpp"
+
 #include <RootTools.h>
+
+#include <fmt/core.h>
 
 #include <TCanvas.h>
 #include <TF1.h>
@@ -31,50 +35,53 @@
 namespace midas
 {
 
-DistributionFactory::DistributionFactory()
+distribution::distribution()
     : RT::Pandora(""), ctx(context("", dimension::NODIM)), hSignalCounter(nullptr), cSignalCounter(nullptr),
       drawOpts("colz")
 {
     prepare();
+    init();
 }
 
-DistributionFactory::DistributionFactory(const context& context)
+distribution::distribution(const context& context)
     : RT::Pandora(""), ctx(context), hSignalCounter(nullptr), cSignalCounter(nullptr), drawOpts("colz")
 {
     prepare();
+    init();
 }
 
-DistributionFactory::DistributionFactory(const context* context)
+distribution::distribution(const context* context)
     : RT::Pandora(""), ctx(*context), hSignalCounter(nullptr), cSignalCounter(nullptr), drawOpts("colz")
 {
     prepare();
+    init();
 }
 
-DistributionFactory::~DistributionFactory() { gSystem->ProcessEvents(); }
-
-DistributionFactory& DistributionFactory::operator=(const DistributionFactory& fa)
+distribution::~distribution() { gSystem->ProcessEvents(); }
+/*
+distribution& distribution::operator=(const distribution& fa)
 {
     if (this == &fa) return *this;
 
     static_cast<RT::Pandora>(*this) = static_cast<RT::Pandora>(fa);
-    DistributionFactory* nthis = this; // new DistributionFactory(fa.ctx);
+    distribution* nthis = this; // new DistributionFactory(fa.ctx);
 
     nthis->ctx = fa.ctx;
 
     init();
 
-    copyHistogram(fa.hSignalCounter, hSignalCounter);
+    detail::copyHistogram(fa.hSignalCounter.get(), hSignalCounter.get());
     return *this;
-}
+}*/
 
-void DistributionFactory::prepare()
+void distribution::prepare()
 {
     ctx.update();
     rename(ctx.hist_name.Data());
     chdir(ctx.dir_name.Data());
 }
 
-void DistributionFactory::init()
+void distribution::init()
 {
     TString htitle = ctx.format_hist_axes();
     TString htitlez = ctx.z.format_string();
@@ -84,27 +91,29 @@ void DistributionFactory::init()
     // input histograms
     if (dimension::DIM3 == ctx.dim && !hSignalCounter)
     {
-        hSignalCounter =
+        hSignalCounter = std::unique_ptr<TH1>(
             RegTH3<TH3D>("@@@d/h_@@@a", htitle, ctx.x.get_bins(), ctx.x.get_min(), ctx.x.get_max(), ctx.y.get_bins(),
-                         ctx.y.get_min(), ctx.y.get_max(), ctx.z.get_bins(), ctx.z.get_min(), ctx.z.get_max());
+                         ctx.y.get_min(), ctx.y.get_max(), ctx.z.get_bins(), ctx.z.get_min(), ctx.z.get_max()));
         hSignalCounter->SetTitle(ctx.context_title);
     }
 
     if (dimension::DIM2 == ctx.dim && !hSignalCounter)
     {
+        hSignalCounter = std::unique_ptr<TH1>(
 #ifdef HAVE_HISTASYMMERRORS
-        hSignalCounter = RegTH2<TH2DA>("@@@d/h_@@@a", htitle,
+            RegTH2<TH2DA>("@@@d/h_@@@a", htitle,
 #else
-        hSignalCounter = RegTH2<TH2D>("@@@d/h_@@@a", htitle,
+            RegTH2<TH2D>("@@@d/h_@@@a", htitle,
 #endif
-                                       ctx.x.get_bins(), ctx.x.get_min(), ctx.x.get_max(), ctx.y.get_bins(),
-                                       ctx.y.get_min(), ctx.y.get_max());
+                          ctx.x.get_bins(), ctx.x.get_min(), ctx.x.get_max(), ctx.y.get_bins(), ctx.y.get_min(),
+                          ctx.y.get_max()));
         hSignalCounter->SetTitle(ctx.context_title);
     }
 
     if (dimension::DIM1 == ctx.dim && !hSignalCounter)
     {
-        hSignalCounter = RegTH1<TH1D>("@@@d/h_@@@a", htitle, ctx.x.get_bins(), ctx.x.get_min(), ctx.x.get_max());
+        hSignalCounter = std::unique_ptr<TH1>(
+            RegTH1<TH1D>("@@@d/h_@@@a", htitle, ctx.x.get_bins(), ctx.x.get_min(), ctx.x.get_max()));
         hSignalCounter->SetTitle(ctx.context_title);
     }
 
@@ -112,13 +121,13 @@ void DistributionFactory::init()
 
     if (!cSignalCounter)
     {
-        cSignalCounter = RegCanvas("@@@d/c_@@@a", htitle, can_width, can_height);
+        cSignalCounter = std::unique_ptr<TCanvas>(RegCanvas("@@@d/c_@@@a", htitle, can_width, can_height));
 
         cSignalCounter->SetTitle(ctx.context_title);
     }
 }
 
-void DistributionFactory::reinit()
+void distribution::reinit()
 {
     if (!hSignalCounter) init();
 
@@ -136,15 +145,16 @@ void DistributionFactory::reinit()
     rename(ctx.hist_name);
 }
 
-void DistributionFactory::proceed()
+void distribution::proceed()
 {
     if (dimension::DIM3 == ctx.dim)
-        dynamic_cast<TH3*>(hSignalCounter)->Fill(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.z.get_var(), *ctx.var_weight);
+        dynamic_cast<TH3*>(hSignalCounter.get())
+            ->Fill(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.z.get_var(), *ctx.var_weight);
 
     if (dimension::DIM2 == ctx.dim)
-        dynamic_cast<TH2*>(hSignalCounter)->Fill(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.var_weight);
+        dynamic_cast<TH2*>(hSignalCounter.get())->Fill(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.var_weight);
 
-    if (dimension::DIM1 == ctx.dim) dynamic_cast<TH1*>(hSignalCounter)->Fill(*ctx.x.get_var(), *ctx.var_weight);
+    if (dimension::DIM1 == ctx.dim) dynamic_cast<TH1*>(hSignalCounter.get())->Fill(*ctx.x.get_var(), *ctx.var_weight);
 
     // 	if (ctx.useClip() and
     // 			*ctx.x.get_var() > ctx.cx.min and *ctx.x.get_var() < ctx.cx.max and
@@ -169,7 +179,15 @@ void DistributionFactory::proceed()
     // 	}
 }
 
-void DistributionFactory::binnorm()
+auto distribution::transform(std::function<void(TH1* h)> transform_function) -> void {
+    transform_function(hSignalCounter.get());
+}
+
+auto distribution::transform(std::function<void(TCanvas* h)> transform_function) -> void {
+    transform_function(cSignalCounter.get());
+}
+
+void distribution::binnorm()
 {
     if (hSignalCounter)
         hSignalCounter->Scale(
@@ -203,30 +221,30 @@ void DistributionFactory::binnorm()
     // // 		}
     // 	}
 }
-
-void DistributionFactory::scale(Float_t factor)
+/*
+void distribution::scale(Float_t factor)
 {
     if (hSignalCounter) hSignalCounter->Scale(factor);
-}
+}*/
 
-void DistributionFactory::finalize(const char* draw_opts) { prepareCanvas(draw_opts); }
+void distribution::finalize(const char* draw_opts) { prepareCanvas(draw_opts); }
 
-void DistributionFactory::niceHisto(TVirtualPad* pad, TH1* hist, float mt, float mr, float mb, float ml, int ndivx,
-                                    int ndivy, float xls, float xts, float xto, float yls, float yts, float yto,
-                                    bool centerY, bool centerX)
+void distribution::niceHisto(TVirtualPad* pad, TH1* hist, float mt, float mr, float mb, float ml, int ndivx, int ndivy,
+                             float xls, float xts, float xto, float yls, float yts, float yto, bool centerY,
+                             bool centerX)
 {
     RT::Hist::NicePad(pad, mt, mr, mb, ml);
     RT::Hist::NiceHistogram(hist, ndivx, ndivy, xls, 0.005f, xts, xto, yls, 0.005f, yts, yto, centerY, centerX);
 }
 
-void DistributionFactory::niceHists(RT::Hist::PadFormat pf, const RT::Hist::GraphFormat& format)
+void distribution::niceHists(RT::Hist::PadFormat pf, const RT::Hist::GraphFormat& format)
 {
     RT::Hist::NicePad(cSignalCounter->cd(), pf);
-    RT::Hist::NiceHistogram(dynamic_cast<TH2*>(hSignalCounter), format);
+    RT::Hist::NiceHistogram(dynamic_cast<TH2*>(hSignalCounter.get()), format);
     hSignalCounter->GetYaxis()->CenterTitle(kTRUE);
 }
 
-void DistributionFactory::prepareCanvas(const char* draw_opts)
+void distribution::prepareCanvas(const char* draw_opts)
 {
     TString colzopts = draw_opts ? TString(draw_opts) : drawOpts;
     TString coltopts = "col,text";
@@ -251,139 +269,22 @@ void DistributionFactory::prepareCanvas(const char* draw_opts)
     hSignalCounter->SetMarkerSize(1.6f);
     hSignalCounter->Sumw2();
 
-    RT::NicePalette(dynamic_cast<TH2*>(hSignalCounter), 0.05f);
-    RT::NoPalette(dynamic_cast<TH2*>(hSignalCounter));
+    // RT::NicePalette(dynamic_cast<TH2*>(hSignalCounter.get()), 0.05f);
+    // RT::NoPalette(dynamic_cast<TH2*>(hSignalCounter.get()));
     gPad->Update();
-
-    // 	float qa_min = 0.;
-    // 	float qa_max = 0.;
-
-    // 	float cn_min = 0.;
-    // 	float cn_max = 0.;
-
-    // 	for (uint i = 0; i < ctx.cx.bins; ++i)
-    // 	{
-    // 		if (cSliceXYDiff)
-    // 		{
-    // 			cSliceXYDiff->cd(1+i);
-    // 			hSliceXYDiff[i]->Draw("E");
-    // 		}
-    //
-    // 		if (cSliceXYFitQA)
-    // 		{
-    // 			cSliceXYFitQA->cd(1+i);
-    // 			hSliceXYFitQA[i]->Draw("E");
-    //
-    // 			for (uint j = 0; j < ctx.cy.bins; ++j)
-    // 			{
-    // 				float cnt = hSliceXYFitQA[i]->GetBinContent(1+j);
-    // 				float err_lo = cnt - hSliceXYFitQA[i]->GetBinErrorLow(1+j);
-    // 				float err_up = cnt + hSliceXYFitQA[i]->GetBinErrorUp(1+j);
-    //
-    // 				if (cnt and (err_lo or err_up))
-    // 				{
-    // 					if (qa_min == 0.)
-    // 						qa_min = err_lo;
-    // 					else
-    // 						qa_min = err_lo < qa_min ? err_lo : qa_min;
-    //
-    // 					if (qa_max == 0.)
-    // 						qa_max = err_up;
-    // 					else
-    // 						qa_max = err_up > qa_max ? err_up : qa_max;
-    // 				}
-    // 			}
-    // 		}
-    //
-    // 		if (cSliceXYChi2NDF)
-    // 		{
-    // 			cSliceXYChi2NDF->cd(1+i);
-    // 			hSliceXYChi2NDF[i]->Draw("E");
-    //
-    // 			for (uint j = 0; j < ctx.cy.bins; ++j)
-    // 			{
-    // 				float cnt = hSliceXYChi2NDF[i]->GetBinContent(1+j);
-    // 				float err_lo = cnt - hSliceXYChi2NDF[i]->GetBinErrorLow(1+j);
-    // 				float err_up = cnt + hSliceXYChi2NDF[i]->GetBinErrorUp(1+j);
-    //
-    // 				if (cnt and (err_lo or err_up))
-    // 				{
-    // 					if (cn_min == 0.)
-    // 						cn_min = err_lo;
-    // 					else
-    // 						cn_min = err_lo < cn_min ? err_lo : cn_min;
-    //
-    // 					if (cn_max == 0.)
-    // 						cn_max = err_up;
-    // 					else
-    // 						cn_max = err_up > cn_max ? err_up : cn_max;
-    // 				}
-    // 			}
-    // 		}
-    //
-    // 		if (cSliceXYprojX)
-    // 		{
-    // 			cSliceXYprojX->cd();
-    //
-    // 			int bmaxx, bmaxy, bmaxz; hSignalCounter->GetMaximumBin(bmaxx, bmaxy, bmaxz);
-    // 			int bminx, bminy, bminz; hSignalCounter->GetMinimumBin(bminx, bminy, bminz);
-    // 			double max = hSignalCounter->GetBinContent(bmaxx, bmaxy, bmaxz);
-    // 			double min = hSignalCounter->GetBinContent(bminx, bminy, bminz);
-    // 			double ddelta = (max - min) * 0.1;
-    //
-    // 			char buff[1000];
-    // 			for (uint j = 0; j < ctx.cy.bins; ++j)
-    // 			{
-    // 				sprintf(buff, "h_%s_xysig_proj_%d", ctx.histPrefix.Data(), j);
-    // 				TH1 * h = hSignalCounter->ProjectionX(buff, 1+j, 1+j);
-    // 				h->SetLineWidth(1);
-    // 				h->SetLineColor(j*4);
-    // 				h->SetMarkerStyle(j+20);
-    // 				h->SetMarkerColor(j*4);
-    //
-    // 				if (j == 0)
-    // 				{
-    // 					h->Draw("hist,E,C");
-    // 					h->GetYaxis()->SetRangeUser(min - ddelta, max + ddelta);
-    // 				}
-    // 				else
-    // 				{
-    // 					h->Draw("hist,E,C,same");
-    // 				}
-    // 			}
-    // 		}
-    // 	}
-
-    // 	float qa_del = 0.05 * (qa_max - qa_min);
-    // 	float cn_del = 0.05 * (cn_max - cn_min);
-    //
-    // 	for (uint i = 0; i < ctx.cx.bins; ++i)
-    // 	{
-    // 		if (cSliceXYFitQA)
-    // 		{
-    // 			cSliceXYFitQA->cd(1+i);
-    // 			hSliceXYFitQA[i]->GetYaxis()->SetRangeUser(qa_min - qa_del, qa_max + qa_del);
-    // 		}
-    //
-    // 		if (cSliceXYChi2NDF)
-    // 		{
-    // 			cSliceXYChi2NDF->cd(1+i);
-    // 			hSliceXYChi2NDF[i]->GetYaxis()->SetRangeUser(cn_min - cn_del, cn_max + cn_del);
-    // 		}
-    // 	}
 }
 
 // TODO this two should be moved somewhere else, not in library
-void DistributionFactory::applyAngDists(double a2, double a4, double corr_a2, double corr_a4)
+void distribution::applyAngDists(double a2, double a4, double corr_a2, double corr_a4)
 {
     const size_t hists_num = 1;
-    TH1* hist_to_map[hists_num] = {hSignalCounter};
+    TH1* hist_to_map[hists_num] = {hSignalCounter.get()};
 
     for (size_t x = 0; x < hists_num; ++x)
         applyAngDists(hist_to_map[x], a2, a4, corr_a2, corr_a4);
 }
 
-void DistributionFactory::applyAngDists(TH1* h, double a2, double a4, double corr_a2, double corr_a4)
+void distribution::applyAngDists(TH1* h, double a2, double a4, double corr_a2, double corr_a4)
 {
     auto f = new TF1("local_legpol", "angdist", -1, 1);
     f->SetParameter(0, 1.0);
@@ -429,53 +330,26 @@ void DistributionFactory::applyAngDists(TH1* h, double a2, double a4, double cor
 }
 
 // TODO move away
-void DistributionFactory::applyBinomErrors(TH1* N)
+void distribution::applyBinomErrors(TH1* N)
 {
     constexpr size_t hists_num = 1;
-    const std::array<TH1*, hists_num> hmap = {hSignalCounter};
+    const std::array<TH1*, hists_num> hmap = {hSignalCounter.get()};
 
     for (size_t x = 0; x < hists_num; ++x)
         applyBinomErrors(hmap[x], N);
 }
 
 // TODO move away
-void DistributionFactory::applyBinomErrors(TH1* q, TH1* N) { RT::calcBinomialErrors(q, N); }
+void distribution::applyBinomErrors(TH1* q, TH1* N) { RT::calcBinomialErrors(q, N); }
 
-bool copyHistogram(TH1* src, TH1* dst, bool with_functions)
-{
-    if (!src or !dst) return false;
+void distribution::rename(const char* newname) { Pandora::rename(newname); }
 
-    auto bins_x = src->GetXaxis()->GetNbins();
-    auto bins_y = src->GetYaxis()->GetNbins();
+void distribution::chdir(const char* newdir) { Pandora::chdir(newdir); }
 
-    for (auto x = 1; x <= bins_x; ++x)
-    {
-        for (auto y = 1; y <= bins_y; ++y)
-        {
-            auto bc = src->GetBinContent(x, y);
-            auto be = src->GetBinError(x, y);
-            dst->SetBinContent(x, y, bc);
-            dst->SetBinError(x, y, be);
-        }
-    }
-
-    if (!with_functions) return true;
-
-    auto l = src->GetListOfFunctions();
-    if (l->GetEntries())
-    {
-        dst->GetListOfFunctions()->Clear();
-        for (int i = 0; i < l->GetEntries(); ++i)
-        {
-            dst->GetListOfFunctions()->Add(l->At(i)->Clone());
-        }
-    }
-
-    return true;
+auto distribution::print() const -> void {
+    fmt::print("Distribution info:\n");
+    ctx.print();
+    hSignalCounter->Print();
 }
-
-void DistributionFactory::rename(const char* newname) { Pandora::rename(newname); }
-
-void DistributionFactory::chdir(const char* newdir) { Pandora::chdir(newdir); }
 
 }; // namespace midas
