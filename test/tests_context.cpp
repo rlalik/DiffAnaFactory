@@ -2,31 +2,47 @@
 
 #include "midas.hpp"
 
-TEST(TestsContext, CreationDim1)
+TEST(TestsContext, CreationByDim)
 {
-    auto ctx = midas::context("test", midas::dimension::DIM1);
-    ctx.get_x().set_label("d2_x").set_unit("mm");
-    ASSERT_THROW(ctx.get_y(), midas::dimension_error);
-    ASSERT_THROW(ctx.get_z(), midas::dimension_error);
+    auto ctx1 = midas::context("test", midas::dimension::DIM1);
+    ctx1.get_x();
+    ASSERT_THROW(ctx1.get_y(), midas::dimension_error);
+    ASSERT_THROW(ctx1.get_z(), midas::dimension_error);
+
+    auto ctx2 = midas::context("test", midas::dimension::DIM2);
+    ctx2.get_x();
+    ctx2.get_y();
+    ASSERT_THROW(ctx2.get_z(), midas::dimension_error);
+
+    auto ctx3 = midas::context("test", midas::dimension::DIM3);
+    ctx3.get_x();
+    ctx3.get_y();
+    ctx3.get_z();
 }
 
-TEST(TestsContext, CreationDim2)
+TEST(TestsContext, CreationByAxes)
 {
-    auto ctx = midas::context("test", midas::dimension::DIM2);
-    ctx.get_x().set_label("d2_x").set_unit("mm");
-    ctx.get_y().set_label("d2_y").set_unit("");
-    ASSERT_THROW(ctx.get_z(), midas::dimension_error);
+    midas::axis_config x;
+    midas::axis_config y;
+    midas::axis_config z;
+
+    auto ctx1 = midas::context("test", x);
+    ctx1.get_x();
+    ASSERT_THROW(ctx1.get_y(), midas::dimension_error);
+    ASSERT_THROW(ctx1.get_z(), midas::dimension_error);
+
+    auto ctx2 = midas::context("test", x, y);
+    ctx2.get_x();
+    ctx2.get_y();
+    ASSERT_THROW(ctx2.get_z(), midas::dimension_error);
+
+    auto ctx3 = midas::context("test", x, y, z);
+    ctx3.get_x();
+    ctx3.get_y();
+    ctx3.get_z();
 }
 
-TEST(TestsContext, CreationDim3)
-{
-    auto ctx = midas::context("test", midas::dimension::DIM3);
-    ctx.get_x().set_label("d2_x").set_unit("mm");
-    ctx.get_y().set_label("d2_y").set_unit("");
-    ctx.get_z().set_label("d2_z").set_unit("cm");
-}
-
-TEST(TestsContext, Creation)
+TEST(TestsContext, Updating)
 {
     auto ctx = midas::context("test", midas::dimension::DIM3);
     ctx.get_x().set_label("d2_x").set_unit("mm");
@@ -51,7 +67,12 @@ TEST(TestsContext, Creation)
 
 TEST(TestsContext, Extend)
 {
-    auto ctx = midas::context("test", midas::dimension::DIM1);
+    auto ctx = midas::context("test", midas::dimension::NODIM);
+    ASSERT_THROW(ctx.get_x(), midas::dimension_error);
+    ASSERT_THROW(ctx.get_y(), midas::dimension_error);
+    ASSERT_THROW(ctx.get_z(), midas::dimension_error);
+
+    ctx.extend();
     ASSERT_NO_THROW(ctx.get_x());
     ASSERT_THROW(ctx.get_y(), midas::dimension_error);
     ASSERT_THROW(ctx.get_z(), midas::dimension_error);
@@ -90,4 +111,88 @@ TEST(TestsContext, Reduce)
 
     auto ctx2 = midas::context("test", midas::dimension::NODIM);
     ASSERT_THROW(ctx2.reduce(), midas::dimension_error);
+}
+
+TEST(TestsContext, ReduceAndExtend)
+{
+    midas::axis_config x;
+    x.set_bins(10, -10, 10);
+
+    midas::axis_config y;
+    y.set_bins(20, -20, 20);
+
+    midas::axis_config z;
+    z.set_bins(30, -30, 30);
+
+    auto ctx = midas::context("test", x, y, z);
+    ctx.reduce(); // to DIM2
+    ctx.reduce(); // to DIM1
+
+    ctx.extend(); // to DIM2
+    // After extension, the new dimensions should be cleared
+    ASSERT_EQ(ctx.get_y().get_bins(), 0);
+    ASSERT_EQ(ctx.get_y().get_min(), 0.0f);
+    ASSERT_EQ(ctx.get_y().get_max(), 0.0f);
+
+    ctx.extend(); // to DIM3
+    // After extension, the new dimensions should be cleared
+    ASSERT_EQ(ctx.get_z().get_bins(), 0);
+    ASSERT_EQ(ctx.get_z().get_min(), 0.0f);
+    ASSERT_EQ(ctx.get_z().get_max(), 0.0f);
+}
+
+TEST(TestsContext, Comapre)
+{
+    midas::axis_config x;
+    x.set_bins(10, -10, 10);
+
+    midas::axis_config y;
+    y.set_bins(20, -20, 20);
+
+    midas::axis_config z;
+    z.set_bins(30, -30, 30);
+
+    auto ctx1 = midas::context("test", x);
+    auto ctx1_1 = midas::context("test", x);
+    auto ctx1_2 = midas::context("test", y);
+
+    auto ctx2 = midas::context("test", x, y);
+    auto ctx2_1 = midas::context("test", x, y);
+    auto ctx2_2 = midas::context("test", y, z);
+
+    auto ctx3 = midas::context("test", x, y, z);
+    auto ctx3_1 = midas::context("test", x, y, z);
+    auto ctx3_2 = midas::context("test", y, z, x);
+
+    ASSERT_TRUE(ctx1 == ctx1);
+    ASSERT_TRUE(ctx1 == ctx1_1);
+    ASSERT_FALSE(ctx1 != ctx1_1);
+    ASSERT_FALSE(ctx1 == ctx1_2);
+    ASSERT_TRUE(ctx1 != ctx1_2);
+    ASSERT_FALSE(ctx1 == ctx2);
+    ASSERT_FALSE(ctx1 == ctx3);
+
+    ASSERT_TRUE(ctx2 == ctx2);
+    ASSERT_TRUE(ctx2 == ctx2_1);
+    ASSERT_FALSE(ctx2 != ctx2_1);
+    ASSERT_FALSE(ctx2 == ctx2_2);
+    ASSERT_TRUE(ctx2 != ctx2_2);
+    ASSERT_FALSE(ctx2 == ctx3);
+    ASSERT_FALSE(ctx2 == ctx1);
+
+    ASSERT_TRUE(ctx3 == ctx3);
+    ASSERT_TRUE(ctx3 == ctx3_1);
+    ASSERT_FALSE(ctx3 != ctx3_1);
+    ASSERT_FALSE(ctx3 == ctx3_2);
+    ASSERT_TRUE(ctx3 != ctx3_2);
+    ASSERT_FALSE(ctx3 == ctx1);
+    ASSERT_FALSE(ctx3 == ctx2);
+
+    auto ctx0 = midas::context("test", midas::dimension::NODIM);
+    ASSERT_FALSE(ctx0 == ctx1);
+    ASSERT_TRUE(ctx0 != ctx1);
+    ASSERT_FALSE(ctx0 == ctx2);
+    ASSERT_TRUE(ctx0 != ctx2);
+    ASSERT_FALSE(ctx0 == ctx3);
+    ASSERT_TRUE(ctx0 != ctx3);
 }

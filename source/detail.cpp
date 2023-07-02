@@ -2,6 +2,7 @@
 
 #include <fmt/core.h>
 
+#include <TH1.h>
 #include <TList.h>
 
 namespace midas

@@ -4,6 +4,7 @@
 
 #include <TCanvas.h>
 #include <TFile.h>
+#include <TH1.h>
 
 #include <fmt/core.h>
 
@@ -37,9 +38,7 @@ protected:
     std::unique_ptr<midas::distribution> fac_3d;
 };
 
-TEST_F(TestsDistribution, Initialization) {
-
-}
+TEST_F(TestsDistribution, Initialization) {}
 
 TEST_F(TestsDistribution, Scale)
 {

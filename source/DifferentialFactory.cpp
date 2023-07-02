@@ -22,8 +22,6 @@
 
 #include <hellofitty.hpp>
 
-#include <RootTools.h>
-
 #include <TCanvas.h>
 #include <TF1.h>
 #include <TH1.h>
@@ -44,8 +42,7 @@ DifferentialFactory::DifferentialFactory() : distribution(), ctx(v_context()), d
     DifferentialFactory::prepare();
 }
 
-DifferentialFactory::DifferentialFactory(const v_context& context)
-    : distribution(context), ctx(context), diffs(nullptr)
+DifferentialFactory::DifferentialFactory(const v_context& context) : distribution(context), ctx(context), diffs(nullptr)
 {
     distribution::prepare();
     DifferentialFactory::prepare();
@@ -180,7 +177,6 @@ void DifferentialFactory::proceed3()
     diffs->Fill3D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.z.get_var(), *ctx.v.get_var(), *ctx.var_weight);
 }
 
-void DifferentialFactory::binnorm() { distribution::binnorm(); }
 /*
 void DifferentialFactory::scale(Float_t factor)
 {
@@ -242,10 +238,11 @@ void DifferentialFactory::niceDiffs(float mt, float mr, float mb, float ml, int 
             Int_t bx, by, bz;
             diffs->reverseBin(i, bx, by, bz);
             TVirtualPad* p = diffs->getPad(bx, by, bz);
-            RT::Hist::NicePad(p, mt, mr, mb, ml);
+            // RT::Hist::NicePad(p, mt, mr, mb, ml); FIXME
 
             TH1* h = (*diffs)[i];
-            RT::Hist::NiceHistogram(h, ndivx, ndivy, xls, 0.005f, xts, xto, yls, 0.005f, yts, yto, centerY, centerX);
+            // RT::Hist::NiceHistogram(h, ndivx, ndivy, xls, 0.005f, xts, xto, yls, 0.005f, yts, yto, centerY, centerX);
+            // FIXME
         }
     }
 }
@@ -376,8 +373,7 @@ void DifferentialFactory::prepareDiffCanvas()
     }
 }
 
-void DifferentialFactory::fitDiffHists(distribution* sigfac, hf::fitter& hf, hf::fit_entry& stdfit,
-                                       bool integral_only)
+void DifferentialFactory::fitDiffHists(distribution* sigfac, hf::fitter& hf, hf::fit_entry& stdfit, bool integral_only)
 {
     // 	FitResultData res;
     bool res;
@@ -416,7 +412,7 @@ void DifferentialFactory::fitDiffHists(distribution* sigfac, hf::fitter& hf, hf:
                 }
 
                 // 		can->Draw(h1opts); FIXME ???
-                RT::Hist::NicePad(pad, 0.10f, 0.01f, 0.15f, 0.10f);
+                // RT::Hist::NicePad(pad, 0.10f, 0.01f, 0.15f, 0.10f); FIXME
 
                 TH1D* hfit = diffs->get(bx, by, bz);
                 hfit->SetStats(0);
@@ -541,7 +537,7 @@ void DifferentialFactory::fitDiffHists(distribution* sigfac, hf::fitter& hf, hf:
 
     if (!sigfac) return;
 
-    RT::NicePalette(dynamic_cast<TH2*>(sigfac->hSignalCounter.get()), 0.05f);
+    // RT::NicePalette(dynamic_cast<TH2*>(sigfac->hSignalCounter.get()), 0.05f); FIXME
 
     printf("Raw/fine binning counts:  %f / %f  for %s\n", sigfac->hSignalCounter->Integral(),
            sigfac->hSignalCounter->Integral(), ctx.hist_name.Data());

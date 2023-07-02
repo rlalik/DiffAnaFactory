@@ -66,8 +66,16 @@ auto context::cast(TString new_name, dimension new_dim) const -> context
 auto context::reduce() -> void
 {
     if (dim == midas::dimension::DIM1) { throw dimension_error("Cannot reduce single dimension"); }
-    else if (dim == midas::dimension::DIM2) { dim = midas::dimension::DIM1; }
-    else if (dim == midas::dimension::DIM3) { dim = midas::dimension::DIM2; }
+    else if (dim == midas::dimension::DIM2)
+    {
+        dim = midas::dimension::DIM1;
+        y = axis_config();
+    }
+    else if (dim == midas::dimension::DIM3)
+    {
+        dim = midas::dimension::DIM2;
+        z = axis_config();
+    }
     else { throw dimension_error("Cannot reduce empty dimension"); }
 }
 
@@ -349,14 +357,12 @@ void context::format_diff_axis()
 
     if (dim > dimension::DIM1)
         htitle = TString::Format("d^{%d}%s/", dim_cnt, diff_var_name.Data());
-    else if (dimension::DIM1 == dim)
-        htitle = TString::Format("d%s/", diff_var_name.Data());
     else
-        htitle = TString::Format("%s", diff_var_name.Data());
+        htitle = TString::Format("d%s/", diff_var_name.Data());
 
-    if (dimension::DIM1 <= dim) htitle += TString("d") + x.get_label().Data();
-    if (dimension::DIM2 <= dim) htitle += TString("d") + y.get_label().Data();
-    if (dimension::DIM3 == dim) htitle += TString("d") + z.get_label().Data();
+    if (dim >= dimension::DIM1) htitle += TString("d") + x.get_label().Data();
+    if (dim >= dimension::DIM2) htitle += TString("d") + y.get_label().Data();
+    if (dim >= dimension::DIM3) htitle += TString("d") + z.get_label().Data();
 
     context_label = htitle;
     context_unit = hunit;
@@ -369,6 +375,8 @@ void context::format_diff_axis()
 
 TString context::format_hist_axes(const char* title) const
 {
+    if (dim == dimension::NODIM) { throw dimension_error("Dimension not set"); }
+
     if (dimension::DIM3 == dim)
         return TString::Format("%s;%s%s%s;%s%s%s", title, x.get_label().Data(), x.format_unit().Data(),
                                y.get_label().Data(), y.format_unit().Data(), z.get_label().Data(),
@@ -376,10 +384,8 @@ TString context::format_hist_axes(const char* title) const
     else if (dimension::DIM2 == dim)
         return TString::Format("%s;%s%s;%s%s", title, x.get_label().Data(), x.format_unit().Data(),
                                y.get_label().Data(), y.format_unit().Data());
-    else if (dimension::DIM1 == dim)
+    else
         return TString::Format("%s;%s%s;Counts [aux]", title, x.get_label().Data(), x.format_unit().Data());
-
-    return TString::Format("%s;;", title);
 }
 
 void context::print() const
@@ -391,4 +397,5 @@ void context::print() const
     if (dim > midas::dimension::DIM1) y.print();
     if (dim > midas::dimension::DIM2) z.print();
 }
+
 }; // namespace midas

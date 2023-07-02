@@ -20,12 +20,11 @@
 
 #include "detail.hpp"
 
-#include <RootTools.h>
-
 #include <fmt/core.h>
 
 #include <TCanvas.h>
 #include <TF1.h>
+#include <TH2.h>
 #include <TH3.h>
 #include <TList.h>
 #include <TSystem.h>
@@ -179,70 +178,17 @@ void distribution::proceed()
     // 	}
 }
 
-auto distribution::transform(std::function<void(TH1* h)> transform_function) -> void {
+auto distribution::transform(std::function<void(TH1* h)> transform_function) -> void
+{
     transform_function(hSignalCounter.get());
 }
 
-auto distribution::transform(std::function<void(TCanvas* h)> transform_function) -> void {
+auto distribution::transform(std::function<void(TCanvas* h)> transform_function) -> void
+{
     transform_function(cSignalCounter.get());
 }
 
-void distribution::binnorm()
-{
-    if (hSignalCounter)
-        hSignalCounter->Scale(
-            1.0 / (hSignalCounter->GetXaxis()->GetBinWidth(1) * hSignalCounter->GetYaxis()->GetBinWidth(1)));
-    //
-    // 	// Signal with cut
-    // 	if (ctx.useCuts())
-    // 	{
-    // 		if (hSignalWithCutsXY) hSignalWithCutsXY->Scale( 1.0 / (
-    // hSignalWithCutsXY->GetXaxis()->GetBinWidth(1) * hSignalWithCutsXY->GetYaxis()->GetBinWidth(1)
-    // ) );
-    // 	}
-    //
-    // 	if (ctx.useClip())
-    // 	{
-    // 		if (hDiscreteXY) hDiscreteXY->Scale( 1.0 / ( hDiscreteXY->GetXaxis()->GetBinWidth(1) *
-    // hDiscreteXY->GetYaxis()->GetBinWidth(1) ) ); 		if (hSignalCounter) hSignalCounter->Scale( 1.0
-    // / ( hSignalCounter->GetXaxis()->GetBinWidth(1) * hSignalCounter->GetYaxis()->GetBinWidth(1) )
-    // );
-    //
-    // // 		if (ctx.useDiff())
-    // // 		{
-    // // 			for (uint i = 0; i < ctx.cx.bins; ++i)
-    // // 			{
-    // // 				for (uint j = 0; j < ctx.cy.bins; ++j)
-    // // 				{
-    // // 					if (hDiscreteXYDiff) hDiscreteXYDiff[i][j]->Scale(factor);
-    // // 				}
-    // // 				if (hSliceXYDiff) hSliceXYDiff[i]->Scale(factor);
-    // // 			}
-    // // 		}
-    // 	}
-}
-/*
-void distribution::scale(Float_t factor)
-{
-    if (hSignalCounter) hSignalCounter->Scale(factor);
-}*/
-
 void distribution::finalize(const char* draw_opts) { prepareCanvas(draw_opts); }
-
-void distribution::niceHisto(TVirtualPad* pad, TH1* hist, float mt, float mr, float mb, float ml, int ndivx, int ndivy,
-                             float xls, float xts, float xto, float yls, float yts, float yto, bool centerY,
-                             bool centerX)
-{
-    RT::Hist::NicePad(pad, mt, mr, mb, ml);
-    RT::Hist::NiceHistogram(hist, ndivx, ndivy, xls, 0.005f, xts, xto, yls, 0.005f, yts, yto, centerY, centerX);
-}
-
-void distribution::niceHists(RT::Hist::PadFormat pf, const RT::Hist::GraphFormat& format)
-{
-    RT::Hist::NicePad(cSignalCounter->cd(), pf);
-    RT::Hist::NiceHistogram(dynamic_cast<TH2*>(hSignalCounter.get()), format);
-    hSignalCounter->GetYaxis()->CenterTitle(kTRUE);
-}
 
 void distribution::prepareCanvas(const char* draw_opts)
 {
@@ -340,13 +286,16 @@ void distribution::applyBinomErrors(TH1* N)
 }
 
 // TODO move away
-void distribution::applyBinomErrors(TH1* q, TH1* N) { RT::calcBinomialErrors(q, N); }
+void distribution::applyBinomErrors(TH1* q, TH1* N)
+{ /*RT::calcBinomialErrors(q, N);*/
+}
 
 void distribution::rename(const char* newname) { Pandora::rename(newname); }
 
 void distribution::chdir(const char* newdir) { Pandora::chdir(newdir); }
 
-auto distribution::print() const -> void {
+auto distribution::print() const -> void
+{
     fmt::print("Distribution info:\n");
     ctx.print();
     hSignalCounter->Print();

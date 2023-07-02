@@ -23,8 +23,7 @@
 
 #include <Pandora.h>
 
-#include <RootTools.h>
-
+#include <TF1.h>
 #include <TNamed.h>
 #include <TString.h>
 
@@ -288,20 +287,8 @@ public:
     virtual void proceed();
     virtual void finalize(const char* draw_opts = nullptr);
 
-    auto transform(std::function<void(TH1 * h)> transform_function) -> void;
-    auto transform(std::function<void(TCanvas * h)> transform_function) -> void;
-
-    virtual void binnorm();
-    // virtual void scale(Float_t factor);
-
-    static void niceHisto(TVirtualPad* pad, TH1* hist, float mt, float mr, float mb, float ml, int ndivx, int ndivy,
-                          float xls, float xts, float xto, float yls, float yts, float yto, bool centerY = false,
-                          bool centerX = false);
-
-    // 	void niceHists(float mt, float mr, float mb, float ml, int ndivx, int ndivy, float xls,
-    // float xts, float xto, float yls, float yts, float yto, bool centerY = false, bool centerX =
-    // false);
-    virtual void niceHists(RT::Hist::PadFormat pf, const RT::Hist::GraphFormat& format);
+    auto transform(std::function<void(TH1* h)> transform_function) -> void;
+    auto transform(std::function<void(TCanvas* h)> transform_function) -> void;
 
     virtual void prepareCanvas(const char* draw_opts = nullptr);
 
@@ -370,7 +357,6 @@ public:
 
     virtual void reset();
 
-    virtual void binnorm();
     // virtual void scale(Float_t factor);
 
     virtual void applyAngDists(double a2, double a4, double corr_a2 = 0.0, double corr_a4 = 0.0);
@@ -412,6 +398,64 @@ private:
 
     // ClassDef(DifferentialFactory, 1);
 };
+
+template <class T> auto scale(T* fac, Float_t factor) -> void
+{
+    fac->transform([&](TH1* h) { h->Scale(factor); });
+}
+
+template <class T> auto bin_normalization(T* fac) -> void
+{
+    fac->transform([](TH1* h) { h->Scale(1.0 / (h->GetXaxis()->GetBinWidth(1) * h->GetYaxis()->GetBinWidth(1))); });
+}
+
+template <class T> auto apply_ang_distribution(T* fac, double a2, double a4, double corr_a2, double corr_a4) -> void
+{
+    fac->transform(
+        [&](TH1* h)
+        {
+            auto f = std::unique_ptr<TF1>(new TF1("local_legpol", "angdist", -1, 1));
+            f->SetParameter(0, 1.0);
+            f->SetParameter(1, a2);
+            f->SetParameter(2, a4);
+
+            bool has_corr = false;
+            TF1* f_corr = nullptr;
+            if (corr_a2 != 0.0 or corr_a4 != 0.0)
+            {
+                has_corr = true;
+                f_corr = new TF1("local_legpol_corr", "angdist", -1, 1);
+
+                f_corr->SetParameter(0, 1.0);
+                f_corr->SetParameter(1, corr_a2);
+                f_corr->SetParameter(2, corr_a4);
+            }
+
+            auto bins_x = h->GetXaxis()->GetNbins();
+            auto bins_y = h->GetYaxis()->GetNbins();
+
+            for (auto x = 1; x <= bins_x; ++x)
+            {
+                auto bin_l = h->GetXaxis()->GetBinLowEdge(x);
+                auto bin_r = h->GetXaxis()->GetBinUpEdge(x);
+                auto bin_w = bin_r - bin_l;
+                auto corr_factor = 1.0;
+
+                auto angmap = f->Integral(bin_l, bin_r);
+
+                if (has_corr) { corr_factor = f_corr->Integral(bin_l, bin_r); }
+                else { angmap /= bin_w; }
+
+                auto scaling_factor = angmap / corr_factor;
+                for (auto y = 1; y <= bins_y; ++y)
+                {
+                    auto tmp_val = h->GetBinContent(x, y);
+                    h->SetBinContent(x, y, tmp_val * scaling_factor);
+                }
+            }
+            if (f_corr) f_corr->Delete();
+        });
+}
 
 }; // namespace midas
 

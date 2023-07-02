@@ -78,7 +78,7 @@ add_library(
 )
 add_library(Midas::Midas ALIAS Midas)
 
-target_link_libraries(Midas PUBLIC ROOT::Core ROOT::Gpad PRIVATE RT::Pandora HelloFitty::HelloFitty jsoncpp)
+target_link_libraries(Midas PUBLIC ROOT::Core ROOT::Gpad RT::Pandora PRIVATE HelloFitty::HelloFitty jsoncpp)
 
 if (fmt_FETCHED)
   set(FMT_TARGET fmt::fmt-header-only)
