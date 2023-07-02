@@ -20,15 +20,16 @@ int main()
     fac->listRegisteredObjects();
 
     // you can fetch specific object by its name
-    TH1F* h1 = (TH1F*)fac->getObject("dir1/hist1");
-    TH1F* h2 = (TH1F*)fac->getObject("hist2");
-    TH1F* h3 = (TH1F*)fac->getObject("hist3", "dir1/dir2");
-    TH1F* h4 = (TH1F*)fac->getObject("@@@d/hist_@@@a_placeholders");
+    TH1F* h1 = dynamic_cast<TH1F*>(fac->getObject("dir1/hist1"));
+    TH1F* h2 = dynamic_cast<TH1F*>(fac->getObject("hist2"));
+    TH1F* h3 = dynamic_cast<TH1F*>(fac->getObject("hist3", "dir1/dir2"));
+    TH1F* h4 = dynamic_cast<TH1F*>(fac->getObject("@@@d/hist_@@@a_placeholders"));
 
     // if failed, then objects are not read from file
     assert(h1 != nullptr);
     assert(h2 != nullptr);
     assert(h3 != nullptr);
+    assert(h4 != nullptr);
 
     // file must be closed by user
     f->Close();

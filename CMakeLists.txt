@@ -73,7 +73,7 @@ add_library(
     source/v_context.cpp
     source/DistributionFactory.cpp
     source/DifferentialFactory.cpp
-    source/ExtraDimensionMapper.cpp
+    source/observable.cpp
     source/MultiDimAnalysisContext.cpp
     source/detail.cpp
 )

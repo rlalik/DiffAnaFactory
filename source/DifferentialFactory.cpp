@@ -18,6 +18,8 @@
 
 #include "midas.hpp"
 
+#include "detail.hpp"
+
 #include <hellofitty.hpp>
 
 #include <RootTools.h>
@@ -93,8 +95,7 @@ void DifferentialFactory::init()
 
 void DifferentialFactory::init_diffs()
 {
-    diffs =
-        new ExtraDimensionMapper(ctx.dim, ctx.name.Data(), hSignalCounter, ctx.v, "@@@d/diffs/%c_@@@a_Signal", this);
+    diffs = new observable(ctx.dim, ctx.name.Data(), hSignalCounter, ctx.v, "@@@d/diffs/%c_@@@a_Signal", this);
 }
 
 void DifferentialFactory::reinit()

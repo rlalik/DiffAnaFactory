@@ -140,7 +140,7 @@ enum class dimension
 
 class DistributionFactory;
 class DifferentialFactory;
-class ExtraDimensionMapper;
+class observable;
 class v_context;
 
 class MIDAS_EXPORT context : public TNamed
@@ -262,7 +262,7 @@ private:
     TString json_fn;
 
     friend DifferentialFactory;
-    friend ExtraDimensionMapper;
+    friend observable;
 
     // ClassDef(DifferentialContext, 2);
 };
@@ -329,69 +329,10 @@ protected:
     // ClassDef(DistributionFactory, 1);
 };
 
-class MIDAS_EXPORT ExtraDimensionMapper : public TObject, public RT::Pandora
-{
-public:
-    ExtraDimensionMapper(dimension dist_dim, const std::string& name, TH1* hist, const axis_config& v_axis,
-                         const std::string& dir_and_name);
-    ExtraDimensionMapper(dimension dist_dim, const std::string& name, TH1* hist, const axis_config& v_axis,
-                         const std::string& dir_and_name, RT::Pandora* sf);
-    virtual ~ExtraDimensionMapper();
-
-    auto getBinsX() const -> Int_t { return nbins_x; }
-    auto getBinsY() const -> Int_t { return nbins_y; }
-    auto getBinsZ() const -> Int_t { return nbins_z; }
-
-    auto getBin(Int_t x, Int_t y = 0, Int_t z = 0) const -> Int_t;
-    auto reverseBin(Int_t bin, Int_t& x) const -> bool;
-    auto reverseBin(Int_t bin, Int_t& x, Int_t& y) const -> bool;
-    auto reverseBin(Int_t bin, Int_t& x, Int_t& y, Int_t& z) const -> bool;
-
-    TH1D* get(Int_t x, Int_t y = 0, Int_t z = 0);
-    TH1D* find(Double_t x, Double_t y = 0.0, Double_t z = 0.0);
-    TCanvas* getCanvas(Int_t x, Int_t y = 0);
-    TVirtualPad* getPad(Int_t x, Int_t y = 0, Int_t z = 0);
-
-    auto getNHists() const -> Int_t { return nhists; }
-    auto operator[](int n) -> TH1D* { return histograms[n]; }
-    auto operator[](int n) const -> const TH1D* { return histograms[n]; }
-
-    auto Fill1D(Float_t x, Float_t v, Float_t w = 1.0) -> void;
-    auto Fill2D(Float_t x, Float_t y, Float_t v, Float_t w = 1.0) -> void;
-    auto Fill3D(Float_t x, Float_t y, Float_t z, Float_t v, Float_t w = 1.0) -> void;
-
-    // ExtraDimensionMapper & operator=(const ExtraDimensionMapper & fa);
-private:
-    auto map1D(const axis_config& axis) -> void;
-    auto map2D(const axis_config& axis) -> void;
-    auto map3D(const axis_config& axis) -> void;
-    auto formatName(Int_t x, Int_t y = 0, Int_t z = 0) -> TString;
-    auto formatCanvasName(Int_t x, Int_t y = 0) -> TString;
-
-public:
-    dimension dim;
-    axis_config axis; //||
-    std::string prefix_name;
-
-    Int_t nhists;
-    Int_t nbins_x, nbins_y, nbins_z;
-
-    TH1* ref_hist;
-    TH1D** histograms;  //!
-    TCanvas** canvases; //!
-
-    // 	TObjArray * objectsFits;
-
-    // ClassDef(ExtraDimensionMapper, 1);
-
-private:
-    // 	FitCallback * fitCallback;
-};
-
 class DifferentialFactory;
 
-typedef void(FitCallback)(DifferentialFactory* fac, DistributionFactory* sigfac, int fit_res, TH1* h, uint x_pos,
-                          uint y_pos, uint z_pos);
+typedef void(FitCallback)(DifferentialFactory* fac, DistributionFactory* sigfac, int fit_res, TH1* h, int x_pos,
+                          int y_pos, int z_pos);
 
 class MIDAS_EXPORT DifferentialFactory : public DistributionFactory
 {
@@ -446,7 +387,7 @@ private:
 
 public:
     v_context ctx;
-    ExtraDimensionMapper* diffs;
+    observable* diffs;
     TCanvas** c_Diffs;      //!
     TObjArray* objectsFits; //!
 

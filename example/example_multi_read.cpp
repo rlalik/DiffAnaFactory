@@ -70,7 +70,7 @@ void loop_read_func()
     for (int i = 0; i < 100; ++i)
     {
         sprintf(hname, hist_pattern, i);
-        TH2F* h1 = (TH2F*)fac->getObject(hname);
+        TH2F* h1 = dynamic_cast<TH2F*>(fac->getObject(hname));
         // if failed, then objects are not read from file
         assert(h1 != nullptr);
 
