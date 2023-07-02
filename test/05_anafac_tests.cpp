@@ -27,10 +27,10 @@ protected:
 
     int bins;
     float min, max;
-    midas::v_context a2ctx;
-    midas::v_context a3ctx;
-    midas::DifferentialFactory* a2fac;
-    midas::DifferentialFactory* a3fac;
+    midas::context a2ctx;
+    midas::context a3ctx;
+    midas::distribution* a2fac;
+    midas::distribution* a3fac;
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(AnaFacCase);
@@ -65,10 +65,10 @@ void AnaFacCase::InitializationTest()
 {
     midas::ExtraDimensionMapper* edm;
 
-    a2fac = new midas::DifferentialFactory(a2ctx);
+    a2fac = new midas::distribution(a2ctx);
     a2fac->init();
 
-    a3fac = new midas::DifferentialFactory(a3ctx);
+    a3fac = new midas::distribution(a3ctx);
     a3fac->init();
 
     edm = a2fac->diffs;
@@ -86,7 +86,7 @@ void AnaFacCase::InitializationTest()
 
 void AnaFacCase::ScaleTest()
 {
-    a3fac = new midas::DifferentialFactory(a3ctx);
+    a3fac = new midas::distribution(a3ctx);
     a3fac->init();
 
     TH1* h = (*a3fac->diffs)[0];
@@ -108,10 +108,10 @@ void AnaFacCase::ScaleTest()
 
 void AnaFacCase::FillTest()
 {
-    a2fac = new midas::DifferentialFactory(a2ctx);
+    a2fac = new midas::distribution(a2ctx);
     a2fac->init();
 
-    a3fac = new midas::DifferentialFactory(a3ctx);
+    a3fac = new midas::distribution(a3ctx);
     a3fac->init();
 
     midas::ExtraDimensionMapper* edm;
@@ -131,13 +131,13 @@ void AnaFacCase::FillTest()
 
 void AnaFacCase::WriteTest()
 {
-    a2fac = new midas::DifferentialFactory(a2ctx);
+    a2fac = new midas::distribution(a2ctx);
     a2fac->init();
     CPPUNIT_ASSERT_EQUAL(true, 0 != a2fac->ctx.validate());
     CPPUNIT_ASSERT_EQUAL(true, a2fac->ctx.update());
     (*a2fac->diffs)[0]->FillRandom("gaus", 1000);
 
-    a3fac = new midas::DifferentialFactory(a3ctx);
+    a3fac = new midas::distribution(a3ctx);
     a3fac->init();
     CPPUNIT_ASSERT_EQUAL(true, 0 != a3fac->ctx.validate());
     CPPUNIT_ASSERT_EQUAL(true, a3fac->ctx.update());
@@ -163,18 +163,18 @@ void AnaFacCase::ReadTest()
         return;
     }
 
-    midas::v_context* dactx = nullptr;
+    midas::context* dactx = nullptr;
 
     std::string tmpname = "a3fac";
     tmpname.append("Ctx");
     file->ls();
-    dactx = (midas::v_context*)file->Get(tmpname.c_str());
+    dactx = (midas::context*)file->Get(tmpname.c_str());
 
     CPPUNIT_ASSERT_EQUAL(true, dactx != nullptr);
     dactx->print();
 
-    midas::DifferentialFactory* fac = nullptr;
-    fac = new midas::DifferentialFactory(dactx);
+    midas::distribution* fac = nullptr;
+    fac = new midas::distribution(dactx);
     fac->setSource(file);
     fac->init();
 

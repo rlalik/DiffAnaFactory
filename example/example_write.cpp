@@ -4,6 +4,6 @@
 
 int main()
 {
-    const midas::context ctx("test", midas::dimension::DIM1);
+    const midas::basic_context ctx("test", midas::dimension::DIM1);
     ctx.print();
 }

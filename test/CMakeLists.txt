@@ -4,9 +4,9 @@ set(INSTALL_GTEST OFF)
 find_or_fetch_package(GTest https://github.com/google/googletest GIT_TAG release-1.11.0)
 
 set(tests_SRCS tests_axis_config.cpp
+               tests_basic_context.cpp
+               tests_basic_distribution.cpp
                tests_context.cpp
-               tests_v_context.cpp
-               tests_distribution.cpp
                tests_observable.cpp)
 
 add_executable(gtests ${tests_SRCS})

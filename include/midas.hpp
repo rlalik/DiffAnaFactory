@@ -138,12 +138,12 @@ enum class dimension
     DIM3
 };
 
+class basic_distribution;
+class context;
 class distribution;
-class DifferentialFactory;
 class observable;
-class v_context;
 
-class MIDAS_EXPORT context : public TNamed
+class MIDAS_EXPORT basic_context : public TNamed
 {
 protected:
     dimension dim; // define dimension
@@ -168,24 +168,24 @@ protected:
     // variable used for cuts when cutCut==kTRUE
 
 protected:
-    context();
+    basic_context();
 
 public:
-    context(TString context_name, dimension context_dim);
-    context(TString context_name, axis_config x_axis);
-    context(TString context_name, axis_config x_axis, axis_config y_axis);
-    context(TString context_name, axis_config x_axis, axis_config y_axis, axis_config z_axis);
-    context(const context&) = default;
-    context(context&&) = default;
-    virtual ~context() = default;
+    basic_context(TString context_name, dimension context_dim);
+    basic_context(TString context_name, axis_config x_axis);
+    basic_context(TString context_name, axis_config x_axis, axis_config y_axis);
+    basic_context(TString context_name, axis_config x_axis, axis_config y_axis, axis_config z_axis);
+    basic_context(const basic_context&) = default;
+    basic_context(basic_context&&) = default;
+    virtual ~basic_context() = default;
 
-    context& operator=(const context&) = default;
-    context& operator=(context&&) = default;
+    basic_context& operator=(const basic_context&) = default;
+    basic_context& operator=(basic_context&&) = default;
 
-    bool operator==(const context& ctx);
-    bool operator!=(const context& ctx);
+    bool operator==(const basic_context& ctx);
+    bool operator!=(const basic_context& ctx);
 
-    auto cast(TString new_name, dimension new_dim) const -> context;
+    auto cast(TString new_name, dimension new_dim) const -> basic_context;
     auto reduce() -> void;
     auto extend() -> axis_config&;
     auto extend(axis_config next_dim) -> void;
@@ -194,7 +194,7 @@ public:
     auto get_y() -> axis_config&;
     auto get_z() -> axis_config&;
 
-    [[nodiscard]] auto expand(axis_config extra_dim) -> v_context;
+    [[nodiscard]] auto expand(axis_config extra_dim) -> context;
 
     // auto get_dimension() const -> dimension { return dim; }
     auto get_name() const -> const TString { return name; }
@@ -219,34 +219,34 @@ protected:
     TString json_fn;
     bool json_found;
 
+    friend basic_distribution;
     friend distribution;
-    friend DifferentialFactory;
 
     // ClassDef(distribution_context, 1);
 };
 
-class MIDAS_EXPORT v_context : public context
+class MIDAS_EXPORT context : public basic_context
 {
 protected:
     axis_config v; // x, y are two dimensions, V is a final Variable axis
 
 private:
-    v_context();
+    context();
 
 public:
-    using context::context;
-    v_context(TString name, dimension dim, axis_config v_axis);
-    v_context(TString name, axis_config x_axis, axis_config v_axis);
-    v_context(TString name, axis_config x_axis, axis_config y_axis, axis_config v_axis);
-    v_context(TString name, axis_config x_axis, axis_config y_axis, axis_config z_axis, axis_config v_axis);
-    v_context(const context& ctx);
-    v_context(const v_context& ctx);
-    virtual ~v_context();
+    using basic_context::basic_context;
+    context(TString name, dimension dim, axis_config v_axis);
+    context(TString name, axis_config x_axis, axis_config v_axis);
+    context(TString name, axis_config x_axis, axis_config y_axis, axis_config v_axis);
+    context(TString name, axis_config x_axis, axis_config y_axis, axis_config z_axis, axis_config v_axis);
+    context(const basic_context& ctx);
+    context(const context& ctx);
+    virtual ~context();
 
-    v_context& operator=(const context& ctx);
-    v_context& operator=(const v_context& ctx);
-    bool operator==(const v_context& ctx);
-    bool operator!=(const v_context& ctx);
+    context& operator=(const basic_context& ctx);
+    context& operator=(const context& ctx);
+    bool operator==(const context& ctx);
+    bool operator!=(const context& ctx);
 
     auto get_v() -> axis_config& { return v; }
     auto get_v() const -> const axis_config& { return v; }
@@ -262,26 +262,26 @@ public:
 private:
     TString json_fn;
 
-    friend DifferentialFactory;
+    friend distribution;
     friend observable;
 
     // ClassDef(DifferentialContext, 2);
 };
 
-class MIDAS_EXPORT distribution : public TObject, public RT::Pandora
+class MIDAS_EXPORT basic_distribution : public TObject, public RT::Pandora
 {
 protected:
-    distribution();
+    basic_distribution();
 
 public:
-    distribution(const context& ctx);
-    distribution(const context* ctx);
-    distribution(const distribution&) = delete;
-    distribution(distribution&&) = default;
-    virtual ~distribution();
+    basic_distribution(const basic_context& ctx);
+    basic_distribution(const basic_context* ctx);
+    basic_distribution(const basic_distribution&) = delete;
+    basic_distribution(basic_distribution&&) = default;
+    virtual ~basic_distribution();
 
-    distribution& operator=(const distribution& fa) = delete;
-    distribution& operator=(distribution&&) = default;
+    basic_distribution& operator=(const basic_distribution& fa) = delete;
+    basic_distribution& operator=(basic_distribution&&) = default;
 
     virtual void reinit();
     virtual void proceed();
@@ -310,7 +310,7 @@ protected:
     virtual void chdir(const char* newdir);
 
 public:
-    context ctx; //||
+    basic_context ctx; //||
 
     // #ifdef HAVE_HISTASYMMERRORS
     // 	TH2DA * hSignalCounter;
@@ -329,23 +329,23 @@ protected:
     // ClassDef(DistributionFactory, 1);
 };
 
-class DifferentialFactory;
+class distribution;
 
-typedef void(FitCallback)(DifferentialFactory* fac, distribution* sigfac, int fit_res, TH1* h, int x_pos, int y_pos,
+typedef void(FitCallback)(distribution* fac, basic_distribution* sigfac, int fit_res, TH1* h, int x_pos, int y_pos,
                           int z_pos);
 
-class MIDAS_EXPORT DifferentialFactory : public distribution
+class MIDAS_EXPORT distribution : public basic_distribution
 {
 public:
-    DifferentialFactory();
-    DifferentialFactory(const v_context& ctx);
-    DifferentialFactory(const v_context* ctx);
-    DifferentialFactory(const DifferentialFactory&) = delete;
-    DifferentialFactory(DifferentialFactory&&) = delete;
-    virtual ~DifferentialFactory();
+    distribution();
+    distribution(const context& ctx);
+    distribution(const context* ctx);
+    distribution(const distribution&) = delete;
+    distribution(distribution&&) = delete;
+    virtual ~distribution();
 
-    DifferentialFactory& operator=(const DifferentialFactory& fa) = delete;
-    DifferentialFactory& operator=(DifferentialFactory&& fa) = delete;
+    distribution& operator=(const distribution& fa) = delete;
+    distribution& operator=(distribution&& fa) = delete;
 
     // 	void getDiffs(bool with_canvases = true);
 
@@ -371,7 +371,7 @@ public:
     void niceSlices(float mt, float mr, float mb, float ml, int ndivx, int ndivy, float xls, float xts, float xto,
                     float yls, float yts, float yto, bool centerY = false, bool centerX = false);
 
-    void fitDiffHists(distribution* sigfac, hf::fitter& hf, hf::fit_entry& stdfit, bool integral_only = false);
+    void fitDiffHists(basic_distribution* sigfac, hf::fitter& hf, hf::fit_entry& stdfit, bool integral_only = false);
     bool fitDiffHist(TH1* hist, hf::fit_entry* hfp, double min_entries = 0);
 
     void setFitCallback(FitCallback* cb) { fitCallback = cb; }
@@ -388,7 +388,7 @@ private:
     virtual void proceed3();
 
 public:
-    v_context ctx;
+    context ctx;
     observable* diffs;
     TCanvas** c_Diffs;      //!
     TObjArray* objectsFits; //!

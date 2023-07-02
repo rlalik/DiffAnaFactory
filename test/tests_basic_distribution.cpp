@@ -14,28 +14,30 @@ protected:
     void SetUp() override
     {
         // q0_ remains empty
-        ctx_3d = std::unique_ptr<midas::context>(new midas::context("ctx_d3", midas::dimension::DIM3));
+        ctx_3d = std::unique_ptr<midas::basic_context>(new midas::basic_context("ctx_d3", midas::dimension::DIM3));
         ctx_3d->get_x().set_bins(4, -10, 10).set_label("a3_x").set_unit("cm");
         ctx_3d->get_y().set_bins(3, -10, 10).set_label("a3_y").set_unit("mm");
         ctx_3d->get_z().set_bins(2, -10, 10).set_label("a3_z").set_unit("um");
 
-        ctx_2d = std::unique_ptr<midas::context>(new midas::context(ctx_3d->cast("ctx_2d", midas::dimension::DIM2)));
-        ctx_1d = std::unique_ptr<midas::context>(new midas::context(ctx_2d->cast("ctx_1d", midas::dimension::DIM1)));
+        ctx_2d = std::unique_ptr<midas::basic_context>(
+            new midas::basic_context(ctx_3d->cast("ctx_2d", midas::dimension::DIM2)));
+        ctx_1d = std::unique_ptr<midas::basic_context>(
+            new midas::basic_context(ctx_2d->cast("ctx_1d", midas::dimension::DIM1)));
 
-        fac_1d = std::unique_ptr<midas::distribution>(new midas::distribution(ctx_1d.get()));
-        fac_2d = std::unique_ptr<midas::distribution>(new midas::distribution(ctx_2d.get()));
-        fac_3d = std::unique_ptr<midas::distribution>(new midas::distribution(ctx_3d.get()));
+        fac_1d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(ctx_1d.get()));
+        fac_2d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(ctx_2d.get()));
+        fac_3d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(ctx_3d.get()));
     }
 
     // void TearDown() override {}
 
-    std::unique_ptr<midas::context> ctx_1d;
-    std::unique_ptr<midas::context> ctx_2d;
-    std::unique_ptr<midas::context> ctx_3d;
+    std::unique_ptr<midas::basic_context> ctx_1d;
+    std::unique_ptr<midas::basic_context> ctx_2d;
+    std::unique_ptr<midas::basic_context> ctx_3d;
 
-    std::unique_ptr<midas::distribution> fac_1d;
-    std::unique_ptr<midas::distribution> fac_2d;
-    std::unique_ptr<midas::distribution> fac_3d;
+    std::unique_ptr<midas::basic_distribution> fac_1d;
+    std::unique_ptr<midas::basic_distribution> fac_2d;
+    std::unique_ptr<midas::basic_distribution> fac_3d;
 };
 
 TEST_F(TestsDistribution, Initialization) {}
@@ -98,12 +100,12 @@ TEST_F(TestsDistribution, Scale)
 //         return;
 //     }
 //
-//     midas::v_context* dactx = nullptr;
+//     midas::v_basic_context* dactx = nullptr;
 //
 //     std::string tmpname = "fac_3d";
 //     tmpname.append("Ctx");
 //     file->ls();
-//     dactx = (midas::v_context*)file->Get(tmpname.c_str());
+//     dactx = (midas::v_basic_context*)file->Get(tmpname.c_str());
 //
 //     ASSERT_TRUE(dactx != nullptr);
 //     dactx->print();

@@ -69,10 +69,10 @@ add_library(
     Midas
     ${Midas_LIBRARY_TYPE}
     source/axis_config.cpp
+    source/basic_context.cpp
+    source/basic_distribution.cpp
     source/context.cpp
-    source/v_context.cpp
     source/distribution.cpp
-    source/DifferentialFactory.cpp
     source/observable.cpp
     source/detail.cpp
 )
@@ -135,12 +135,7 @@ option(BUILD_DICTIONARY "Build ROOT dictionary." OFF)
 if (BUILD_DICTIONARY)
   # cmake-format: off
   root_generate_dictionary(G__Midas_cc
-    DistributionContext.hpp
-    DistributionFactory.hpp
-    DifferentialContext.hpp
-    DifferentialFactory.hpp
-    ExtraDimensionMapper.hpp
-    MultiDimDistributionContext.hpp
+    modas.hpp
     MODULE Midas
     LINKDEF inc/LinkDef.h)
   # cmake-format: on
