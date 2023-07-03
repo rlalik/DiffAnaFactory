@@ -24,34 +24,32 @@
 #include <fmt/core.h>
 
 #include <fstream>
-#include <sys/stat.h>
 
 namespace midas
 {
 
-basic_context::basic_context() : TNamed(), dim(dimension::NODIM), var_weight(nullptr), json_found(false) {}
+basic_context::basic_context() : TNamed(), dim(dimension::NODIM), json_found(false) {}
 
-// context::context(dimension dim) : TNamed(), dim(dim), var_weight(nullptr), json_found(false) {}
+// context::context(dimension dim) : TNamed(), dim(dim), json_found(false) {}
 
 basic_context::basic_context(TString context_name, dimension context_dim)
-    : TNamed(), dim(context_dim), name(context_name), var_weight(nullptr)
+    : TNamed(), dim(context_dim), name(context_name)
 {
 }
 
 basic_context::basic_context(TString context_name, axis_config x_axis)
-    : TNamed(), dim(dimension::DIM1), name(context_name), x(std::move(x_axis)), var_weight(nullptr)
+    : TNamed(), dim(dimension::DIM1), name(context_name), x(std::move(x_axis))
 {
 }
 
 basic_context::basic_context(TString context_name, axis_config x_axis, axis_config y_axis)
-    : TNamed(), dim(dimension::DIM2), name(context_name), x(std::move(x_axis)), y(std::move(y_axis)),
-      var_weight(nullptr)
+    : TNamed(), dim(dimension::DIM2), name(context_name), x(std::move(x_axis)), y(std::move(y_axis))
 {
 }
 
 basic_context::basic_context(TString context_name, axis_config x_axis, axis_config y_axis, axis_config z_axis)
     : TNamed(), dim(dimension::DIM3), name(context_name), x(std::move(x_axis)), y(std::move(y_axis)),
-      z(std::move(z_axis)), var_weight(nullptr)
+      z(std::move(z_axis))
 {
 }
 
@@ -123,33 +121,6 @@ auto basic_context::expand(axis_config extra_dim) -> context
     context vctx = *this;
     vctx.get_v() = std::move(extra_dim);
     return vctx;
-}
-
-auto basic_context::update() -> bool
-{
-    if (0 == hist_name.Length()) hist_name = name;
-
-    if (0 == dir_name.Length()) dir_name = hist_name;
-
-    if (name.EndsWith("Ctx"))
-        SetName(name);
-    else
-        SetName(name + "Ctx");
-
-    format_diff_axis();
-
-    return true;
-}
-
-int basic_context::validate() const
-{
-    if (0 == name.Length()) return 1;
-    if (dimension::DIM1 <= dim && x.get_bins() and !x.get_var()) return 11;
-    if (dimension::DIM2 <= dim && y.get_bins() and !y.get_var()) return 12;
-    if (dimension::DIM3 == dim && z.get_bins() and !z.get_var()) return 13;
-
-    return 0;
-    // 	return update();
 }
 
 bool basic_context::configureFromJson(const char* ctx_name)
@@ -239,50 +210,6 @@ bool basic_context::configureToJson(const char* ctx_name, const char* jsonfile)
     return true;
 }
 
-bool basic_context::findJsonFile(const char* initial_path, const char* filename, int search_depth)
-{
-    const size_t max_len = 1024 * 16;
-    int depth_counter = 0;
-    char* resolv_name = new char[max_len];
-    char* test_path = new char[max_len];
-    struct stat buffer;
-
-    strncpy(test_path, initial_path, max_len);
-
-    char* ret_val = 0;
-    while (true)
-    {
-        ret_val = realpath(test_path, resolv_name);
-        if (!ret_val) break;
-
-        std::string name = resolv_name;
-        name += "/";
-        name += filename;
-
-        if (stat(name.c_str(), &buffer) == 0)
-        {
-            json_found = true;
-            json_fn = name;
-            break;
-        }
-
-        strncpy(test_path, resolv_name, max_len);
-        strncpy(test_path + strlen(test_path), "/..", 4);
-
-        if (strcmp(resolv_name, "/") == 0) break;
-
-        ++depth_counter;
-        if (search_depth >= 0 and (depth_counter > search_depth)) break;
-    }
-
-    if (json_found) printf(" Found json config at %s\n", json_fn.Data());
-
-    delete[] resolv_name;
-    delete[] test_path;
-
-    return json_found;
-}
-
 // context& context::operator=(const context& ctx)
 // {
 //     if (this == &ctx) return *this;
@@ -290,7 +217,7 @@ bool basic_context::findJsonFile(const char* initial_path, const char* filename,
 //     // 	ctx_name = ctx.ctx_name;
 //     dir_name = ctx.dir_name;
 //     hist_name = ctx.hist_name;
-//     diff_var_name = ctx.diff_var_name;
+//     diff_label = ctx.diff_label;
 //
 //     title = ctx.title;
 //     label = ctx.label;
@@ -340,14 +267,35 @@ bool basic_context::operator==(const basic_context& ctx)
 
 bool basic_context::operator!=(const basic_context& ctx) { return !operator==(ctx); }
 
-void basic_context::format_diff_axis()
+void basic_context::prepare()
 {
     if (dim == dimension::NODIM) { throw dimension_error("Dimension not set"); }
 
+    if (0 == hist_name.Length()) hist_name = name;
+
+    if (0 == dir_name.Length()) dir_name = hist_name;
+
+    if (name.EndsWith("Ctx"))
+        SetName(name);
+    else
+        SetName(name + "Ctx");
+
     TString hunit = "1/";
-    if (dimension::DIM1 <= dim) hunit += x.get_unit().Data();
-    if (dimension::DIM2 <= dim) hunit += y.get_unit().Data();
-    if (dimension::DIM3 == dim) hunit += z.get_unit().Data();
+    if (dim >= dimension::DIM1)
+    {
+        x.validate();
+        hunit += x.get_unit().Data();
+    }
+    if (dim >= dimension::DIM2)
+    {
+        y.validate();
+        hunit += y.get_unit().Data();
+    }
+    if (dim == dimension::DIM3)
+    {
+        z.validate();
+        hunit += z.get_unit().Data();
+    }
 
     UInt_t dim_cnt = 0;
     TString htitle;
@@ -356,9 +304,9 @@ void basic_context::format_diff_axis()
     if (dimension::DIM1 == dim) dim_cnt = 1;
 
     if (dim > dimension::DIM1)
-        htitle = TString::Format("d^{%d}%s/", dim_cnt, diff_var_name.Data());
+        htitle = TString::Format("d^{%d}%s/", dim_cnt, diff_label.Data());
     else
-        htitle = TString::Format("d%s/", diff_var_name.Data());
+        htitle = TString::Format("d%s/", diff_label.Data());
 
     if (dim >= dimension::DIM1) htitle += TString("d") + x.get_label().Data();
     if (dim >= dimension::DIM2) htitle += TString("d") + y.get_label().Data();
@@ -392,7 +340,7 @@ void basic_context::print() const
 {
     fmt::print("Context: {}   Dimensions: {}\n", name.Data(), detail::dim_to_int(dim));
     fmt::print(" Name: {}   Hist name: {}   Dir Name: %s\n", name.Data(), hist_name.Data(), dir_name.Data());
-    fmt::print(" Var name: {}\n", diff_var_name.Data());
+    fmt::print(" Var name: {}\n", diff_label.Data());
     x.print();
     if (dim > midas::dimension::DIM1) y.print();
     if (dim > midas::dimension::DIM2) z.print();

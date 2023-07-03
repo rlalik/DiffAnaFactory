@@ -73,6 +73,8 @@ observable::observable(dimension dist_dim, const std::string& ctx_name, TH1* his
 observable::~observable()
 {
     gSystem->ProcessEvents();
+    for (int i = 0; i < nhists; ++i)
+        delete histograms[i];
     delete[] histograms;
 }
 
@@ -119,16 +121,16 @@ auto observable::map1D(const axis_config& v_axis) -> void
 {
     for (Int_t i = 0; i < nbins_x; ++i)
     {
+        auto fname = formatName(i);
         if (v_axis.get_bins_array())
         {
-            fmt::print(stderr, "Histogram bins arrays are not supported yet.\n");
-            std::abort();
+            histograms[getBin(i)] = RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
+                                                  v_axis.get_bins(), v_axis.get_bins_array());
         }
         else
         {
-            auto fname = formatName(i);
-            histograms[getBin(i)] = RegTH1<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
-                                                 v_axis.get_bins(), v_axis.get_min(), v_axis.get_max());
+            histograms[getBin(i)] = RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
+                                                  v_axis.get_bins(), v_axis.get_min(), v_axis.get_max());
         }
     }
 
@@ -146,16 +148,16 @@ auto observable::map2D(const axis_config& v_axis) -> void
     {
         for (Int_t j = 0; j < nbins_y; ++j)
         {
+            auto fname = formatName(i, j);
             if (v_axis.get_bins_array())
             {
-                std::cerr << "Histogram bins arrays are not supported yet." << std::endl;
-                std::abort();
+                histograms[getBin(i, j)] = RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
+                                                         v_axis.get_bins(), v_axis.get_bins_array());
             }
             else
             {
-                auto fname = formatName(i, j);
-                histograms[getBin(i, j)] = RegTH1<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
-                                                        v_axis.get_bins(), v_axis.get_min(), v_axis.get_max());
+                histograms[getBin(i, j)] = RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
+                                                         v_axis.get_bins(), v_axis.get_min(), v_axis.get_max());
             }
         }
         auto fname = formatCanvasName(i);
@@ -174,16 +176,16 @@ auto observable::map3D(const axis_config& v_axis) -> void
         {
             for (Int_t k = 0; k < nbins_z; ++k)
             {
+                auto fname = formatName(i, j, k);
                 if (v_axis.get_bins_array())
                 {
-                    std::cerr << "Histogram bins arrays are not supported yet." << std::endl;
-                    std::abort();
+                    histograms[getBin(i, j, k)] = RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
+                                                                v_axis.get_bins(), v_axis.get_bins_array());
                 }
                 else
                 {
-                    auto fname = formatName(i, j, k);
-                    histograms[getBin(i, j, k)] = RegTH1<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
-                                                               v_axis.get_bins(), v_axis.get_min(), v_axis.get_max());
+                    histograms[getBin(i, j, k)] = RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
+                                                                v_axis.get_bins(), v_axis.get_min(), v_axis.get_max());
                 }
             }
             auto fname = formatCanvasName(i, j);
@@ -268,9 +270,9 @@ auto observable::getPad(Int_t x, Int_t y, Int_t z) -> TVirtualPad*
 {
     TCanvas* can = getCanvas(x, y);
 
-    if (dimension::DIM3 == dim) return can->GetPad(1 + z);
-    if (dimension::DIM2 == dim) return can->GetPad(1 + y);
-    if (dimension::DIM1 == dim) return can->GetPad(1 + x);
+    if (dim == dimension::DIM3) return can->GetPad(1 + z);
+    if (dim == dimension::DIM2) return can->GetPad(1 + y);
+    if (dim == dimension::DIM1) return can->GetPad(1 + x);
 
     return can->GetPad(0);
 }

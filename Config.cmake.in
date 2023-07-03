@@ -1,4 +1,4 @@
 include(CMakeFindDependencyMacro)
 
-find_dependency(ROOT QUIET REQUIRED COMPONENTS Core)
+find_dependency(ROOT QUIET REQUIRED COMPONENTS Core Gpad Hist)
 include(${CMAKE_CURRENT_LIST_DIR}/MidasTargets.cmake)

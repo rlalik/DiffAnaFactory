@@ -30,7 +30,7 @@ void write_func()
     for (int i = 0; i < 100; ++i)
     {
         sprintf(hname, hist_pattern, i);
-        TH2F* h = fac->RegTH2<TH2F>(hname, "Histogram - loop", 100, -5, 5, 100, -5, 5);
+        TH2F* h = fac->RegHist<TH2F>(hname, "Histogram - loop", 100, -5, 5, 100, -5, 5);
 
         for (int j = 0; j < 100 * 100; ++j)
             h->SetBinContent(j + 1, sqrt(j));

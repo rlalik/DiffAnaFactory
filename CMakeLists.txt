@@ -35,26 +35,8 @@ include_directories(/usr/include/jsoncpp/)
 # set(jsoncpp_dep jsoncpp) else() set(jsoncpp_dep jsoncpp_lib) endif()
 
 find_package(RootTools REQUIRED)
-find_package(Pandora REQUIRED)
+find_package(Pandora 0.9.3 REQUIRED)
 find_package(HelloFitty REQUIRED)
-
-# conditional modules
-option(ENABLE_ADVANCE_TOOLS "Enables advanced tools" OFF)
-if(ENABLE_ADVANCE_TOOLS)
-  include(FetchContent)
-  FetchContent_Declare(
-    cmake-scripts
-    GIT_REPOSITORY https://github.com/StableCoder/cmake-scripts.git
-    GIT_TAG main)
-
-  FetchContent_MakeAvailable(cmake-scripts)
-  list(APPEND CMAKE_MODULE_PATH ${cmake-scripts_SOURCE_DIR})
-  message(STATUS "${cmake-scripts_SOURCE_DIR}")
-  include(sanitizers)
-  include(code-coverage)
-  include(tools)
-  include_what_you_use(-Xiwyu;--error_always)
-endif()
 
 # find_package(HistAsymmErrors QUIET)
 if(HistAsymmErrors_FOUND)
@@ -116,12 +98,10 @@ set_target_properties(
 )
 
 target_include_directories(
-  Midas ${warning_guard}
-  PUBLIC
+    Midas ${warning_guard}
+    PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/inc>
-  PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
 
 target_include_directories(
@@ -134,8 +114,7 @@ target_include_directories(
 option(BUILD_DICTIONARY "Build ROOT dictionary." OFF)
 if (BUILD_DICTIONARY)
   # cmake-format: off
-  root_generate_dictionary(G__Midas_cc
-    modas.hpp
+  root_generate_dictionary(G__Midas_cc midas.hpp
     MODULE Midas
     LINKDEF inc/LinkDef.h)
   # cmake-format: on

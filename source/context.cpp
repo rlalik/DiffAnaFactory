@@ -28,18 +28,7 @@
 namespace midas
 {
 
-context::context()
-{
-    // basic
-    // x and y binning for full range
-
-    // cut range when useCut==kTRUE
-    // 	cutMin = cutMax = 0;
-
-    // variables to use for diff analysis
-    var_weight = 0;
-    // variable used for cuts when cutCut==kTRUE
-}
+context::context() {}
 
 context::context(TString context_name, dimension context_dim, axis_config v_axis)
     : basic_context(context_name, context_dim), v(std::move(v_axis))
@@ -206,6 +195,12 @@ bool context::operator==(const context& ctx)
 }
 
 bool context::operator!=(const context& ctx) { return !operator==(ctx); }
+
+void context::prepare()
+{
+    v.validate();
+    basic_context::prepare();
+}
 
 void context::print() const
 {

@@ -24,14 +24,14 @@
 #include <Pandora.h>
 
 #include <TF1.h>
+#include <TH1.h>
 #include <TNamed.h>
 #include <TString.h>
 
 #include <functional>
 #include <stdexcept>
 
-class TH1;
-class TH1D;
+class TCanvas;
 class TH2;
 class TH2D;
 class TVirtualPad;
@@ -78,9 +78,9 @@ public:
         delta = (max - min) / static_cast<Float_t>(bins);
         return *this;
     }
-    auto set_bins(Float_t* bins_array) -> axis_config&
+    template <size_t size> auto set_bins(Double_t (&bins_array)[size]) -> axis_config&
     {
-        bins = 0;
+        bins = size - 1;
         min = 0.0;
         max = 0.0;
         bins_arr = bins_array;
@@ -99,11 +99,11 @@ public:
     }
 
     auto get_var() const -> const Float_t* { return var; }
-    auto get_bins() const -> Int_t { return bins; }
-    auto get_min() const -> Float_t { return min; }
-    auto get_max() const -> Float_t { return max; }
+    constexpr auto get_bins() const -> Int_t { return bins; }
+    constexpr auto get_min() const -> Float_t { return min; }
+    constexpr auto get_max() const -> Float_t { return max; }
     auto get_delta() const -> Float_t { return delta; }
-    auto get_bins_array() const -> const Float_t* { return bins_arr; }
+    constexpr auto get_bins_array() const -> const Double_t* { return bins_arr; }
     auto get_label() const -> const TString& { return label; }
     auto get_unit() const -> const TString& { return unit; }
 
@@ -114,18 +114,19 @@ public:
     static auto format_unit(const char* unit) -> TString;
     static auto format_unit(const TString& unit) -> TString;
 
+    auto validate() const -> void;
     auto print() const -> void;
 
 private:
     TString label; // label for the axis
     TString unit;  // unit for the axis
     // TString title;   // title for the axis
-    Float_t* var;      //!	here is the address of the variable which is used to fill data
-    Int_t bins;        // number of bins
-    Float_t min;       // minimum axis value
-    Float_t max;       // maximum axis value
-    Float_t* bins_arr; //! here one can put custom bins division array
-    Float_t delta;     //! CAUTION: overriden by validate(), do not set by hand
+    Float_t* var;       //!	here is the address of the variable which is used to fill data
+    Int_t bins;         // number of bins
+    Float_t min;        // minimum axis value
+    Float_t max;        // maximum axis value
+    Double_t* bins_arr; //! here one can put custom bins division array
+    Float_t delta;      //! CAUTION: overriden by validate(), do not set by hand
 
     // ClassDef(axis_config, 1);
 };
@@ -143,15 +144,16 @@ class context;
 class distribution;
 class observable;
 
+/// Basic context to store primitive distribution. It is intended to be a base class for @see midas::context context for
+/// extended distribution.
 class MIDAS_EXPORT basic_context : public TNamed
 {
 protected:
-    dimension dim; // define dimension
-    // config
-    mutable TString name; // prefix for histograms
-    TString dir_name;
-    TString hist_name; // name for histograms
-    TString diff_var_name;
+    dimension dim;        // context dimension
+    mutable TString name; // context name
+    TString dir_name;     // histograms directory
+    TString hist_name;    // histograms common name
+    TString diff_label;   // differential distribution variable name, e.g. d^2N/dxdy, etc...
 
     TString context_title;
     TString context_label;
@@ -160,39 +162,69 @@ protected:
 
     axis_config x, y, z; // x..z are dimensions, V is an observable variable axis
 
-    // 	Double_t cutMin;			// Cut: min
-    // 	Double_t cutMax;			// Cut: max
-
-    // variables to use for diff analysis
-    Float_t* var_weight; //!
-    // variable used for cuts when cutCut==kTRUE
-
 protected:
     basic_context();
 
 public:
+    /// Initialize context with name and the dimension
+    /// @param context_name the context name
+    /// @param context_dim the context dimension
     basic_context(TString context_name, dimension context_dim);
+    /// Initialzie 1D context with name
+    /// @param context_name the context name
+    /// @param x_axis the x axis description
     basic_context(TString context_name, axis_config x_axis);
+    /// Initialzie 2D context with name
+    /// @param context_name the context name
+    /// @param x_axis the x axis description
+    /// @param y_axis the y axis description
     basic_context(TString context_name, axis_config x_axis, axis_config y_axis);
+    /// Initialzie 1D context with name
+    /// @param context_name the context name
+    /// @param x_axis the x axis description
+    /// @param y_axis the y axis description
+    /// @param z_axis the z axis description
     basic_context(TString context_name, axis_config x_axis, axis_config y_axis, axis_config z_axis);
+    /// Default copy constructor
     basic_context(const basic_context&) = default;
+    /// Default move constructor
     basic_context(basic_context&&) = default;
+    /// Default destructor
     virtual ~basic_context() = default;
 
-    basic_context& operator=(const basic_context&) = default;
-    basic_context& operator=(basic_context&&) = default;
+    /// Default assignment operator
+    auto operator=(const basic_context&) -> basic_context& = default;
+    /// Default move-assignment operator
+    auto operator=(basic_context&&) -> basic_context& = default;
 
-    bool operator==(const basic_context& ctx);
-    bool operator!=(const basic_context& ctx);
+    /// Equality operator
+    auto operator==(const basic_context& ctx) -> bool;
+    /// Non-equality operator
+    auto operator!=(const basic_context& ctx) -> bool;
 
+    /// Cast current context to new dimension, either of lwoer or higher order.
+    /// @param new_name new context name
+    /// @param new_dim new context domension
+    /// @return new context of requested dimension
     auto cast(TString new_name, dimension new_dim) const -> basic_context;
+    /// Reduce dimension by 1
     auto reduce() -> void;
+    /// Extend dimension by 1
+    /// @return the new dimension axis, to be used for configuring the dimension
     auto extend() -> axis_config&;
+    /// Extend dimension by 1 with the given axis description
+    /// @param next_dim the axis configuration for the next dimension
     auto extend(axis_config next_dim) -> void;
 
+    /// @{
+    /// @name Get axis functions
+    /// Get the x,y,z dimension axes
+    /// @return the requested axis config
+    /// @throw midas::dimension_error if dimension not specified yet
     auto get_x() -> axis_config&;
     auto get_y() -> axis_config&;
     auto get_z() -> axis_config&;
+    /// @}
 
     [[nodiscard]] auto expand(axis_config extra_dim) -> context;
 
@@ -203,17 +235,13 @@ public:
     // auto get_unit() const -> const TString& { return unit; }
     // auto get_axis_text() const -> const TString& { return axis_text; }
 
-    virtual bool update();
-    virtual int validate() const;
-
-    virtual void format_diff_axis();
     virtual TString format_hist_axes(const char* title = nullptr) const;
 
-    virtual bool findJsonFile(const char* initial_path, const char* filename, int search_depth = -1);
     virtual bool configureFromJson(const char* name);
     virtual bool configureToJson(const char* name, const char* jsonfile);
 
-    void print() const;
+    virtual auto prepare() -> void;
+    virtual auto print() const -> void;
 
 protected:
     TString json_fn;
@@ -225,6 +253,8 @@ protected:
     // ClassDef(distribution_context, 1);
 };
 
+/// Advanced context which supports also v-axis, and axis for observable which can add additional constrains on the
+/// distribution. An example is to create a invariant mass spectrum of some particle to extract the signal in given bin.
 class MIDAS_EXPORT context : public basic_context
 {
 protected:
@@ -248,16 +278,16 @@ public:
     bool operator==(const context& ctx);
     bool operator!=(const context& ctx);
 
+    auto expand(axis_config extra_dim) -> context = delete;
+
     auto get_v() -> axis_config& { return v; }
     auto get_v() const -> const axis_config& { return v; }
-
-    // flags
-    // 	virtual bool useCuts() const { return (cutMin or cutMax); }
 
     virtual bool configureFromJson(const char* name);
     virtual bool configureToJson(const char* name, const char* jsonfile);
 
-    void print() const;
+    virtual void prepare() override;
+    virtual void print() const override;
 
 private:
     TString json_fn;
@@ -283,29 +313,24 @@ public:
     basic_distribution& operator=(const basic_distribution& fa) = delete;
     basic_distribution& operator=(basic_distribution&&) = default;
 
-    virtual void reinit();
-    virtual void proceed();
-    virtual void finalize(const char* draw_opts = nullptr);
+    virtual auto reinit() -> void;
+    virtual auto fill(Float_t weight = 1.0) -> void;
+    virtual auto finalize(const char* draw_opts = nullptr) -> void;
 
     auto transform(std::function<void(TH1* h)> transform_function) -> void;
     auto transform(std::function<void(TCanvas* h)> transform_function) -> void;
 
-    virtual void prepareCanvas(const char* draw_opts = nullptr);
-
-    virtual void applyAngDists(double a2, double a4, double corr_a2 = 0.0, double corr_a4 = 0.0);
-    static void applyAngDists(TH1* h, double a2, double a4, double corr_a2 = 0.0, double corr_a4 = 0.0);
+    virtual void prepare_canvas(const char* draw_opts = nullptr);
 
     virtual void applyBinomErrors(TH1* N);
     static void applyBinomErrors(TH1* q, TH1* N);
 
     void setDrawOptions(const char* draw_opts) { drawOpts = draw_opts; }
 
-    auto print() const -> void;
+    virtual auto prepare() -> void;
+    virtual auto print() const -> void;
 
 protected:
-    virtual void prepare();
-    virtual void init();
-
     virtual void rename(const char* newname);
     virtual void chdir(const char* newdir);
 
@@ -320,16 +345,11 @@ public:
     std::unique_ptr<TH1> hSignalCounter;     //->	// discrete X-Y, signal extracted
     std::unique_ptr<TCanvas> cSignalCounter; //->
 
-    // 	TCanvas * cDiscreteXYSig;		//->
-    // 	TCanvas * cDiscreteXYSigFull;	//->
-
 protected:
     TString drawOpts;
 
     // ClassDef(DistributionFactory, 1);
 };
-
-class distribution;
 
 typedef void(FitCallback)(distribution* fac, basic_distribution* sigfac, int fit_res, TH1* h, int x_pos, int y_pos,
                           int z_pos);
@@ -344,53 +364,60 @@ public:
     distribution(distribution&&) = delete;
     virtual ~distribution();
 
-    distribution& operator=(const distribution& fa) = delete;
-    distribution& operator=(distribution&& fa) = delete;
+    auto operator=(const distribution& fa) -> distribution& = delete;
+    auto operator=(distribution&& fa) -> distribution& = delete;
 
-    // 	void getDiffs(bool with_canvases = true);
+    virtual auto prepare() -> void override;
+    virtual auto reinit() -> void override;
+    virtual auto fill(Float_t weight = 1.0) -> void override;
+    virtual auto finalize(const char* draw_opts = nullptr) -> void override;
 
-    virtual void prepare();
-    virtual void init();
-    virtual void reinit();
-    virtual void proceed();
-    // 	virtual void finalize(bool flag_details = false);
+    virtual auto reset() -> void override;
 
-    virtual void reset();
+    auto transform_d(std::function<void(TH1* h)> transform_function) -> void
+    {
+        basic_distribution::transform(transform_function);
+    }
+    auto transform_v(std::function<void(TH1* h)> transform_function) -> void;
+    auto transform(std::function<void(TH1* h)> transform_function) -> void
+    {
+        transform_d(transform_function);
+        transform_v(transform_function);
+    }
 
-    // virtual void scale(Float_t factor);
+    auto transform_d(std::function<void(TCanvas* h)> transform_function) -> void
+    {
+        basic_distribution::transform(transform_function);
+    }
+    auto transform_v(std::function<void(TCanvas* h)> transform_function) -> void;
+    auto transform(std::function<void(TCanvas* h)> transform_function) -> void
+    {
+        transform_d(transform_function);
+        transform_v(transform_function);
+    }
 
-    virtual void applyAngDists(double a2, double a4, double corr_a2 = 0.0, double corr_a4 = 0.0);
+    virtual void applyBinomErrors(TH1* N) override;
 
-    virtual void applyBinomErrors(TH1* N);
+    bool write(TFile* f /* = nullptr*/, bool verbose = false) override;
+    bool write(const char* filename /* = nullptr*/, bool verbose = false) override;
 
-    bool write(TFile* f /* = nullptr*/, bool verbose = false);
-    bool write(const char* filename /* = nullptr*/, bool verbose = false);
+    void fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, hf::fit_entry& stdfit, bool integral_only = false);
+    bool fit_cell_hist(TH1* hist, hf::fit_entry* hfp, double min_entries = 0);
 
-    void niceDiffs(float mt, float mr, float mb, float ml, int ndivx, int ndivy, float xls, float xts, float xto,
-                   float yls, float yts, float yto, bool centerY = false, bool centerX = false);
-    void niceSlices(float mt, float mr, float mb, float ml, int ndivx, int ndivy, float xls, float xts, float xto,
-                    float yls, float yts, float yto, bool centerY = false, bool centerX = false);
-
-    void fitDiffHists(basic_distribution* sigfac, hf::fitter& hf, hf::fit_entry& stdfit, bool integral_only = false);
-    bool fitDiffHist(TH1* hist, hf::fit_entry* hfp, double min_entries = 0);
-
-    void setFitCallback(FitCallback* cb) { fitCallback = cb; }
-    virtual void prepareDiffCanvas();
+    void set_fit_callback(FitCallback* cb) { fitCallback = cb; }
+    virtual void prepare_cells_canvas();
 
 protected:
     virtual void rename(const char* newname);
     virtual void chdir(const char* newdir);
 
 private:
-    virtual void init_diffs();
-    virtual void proceed1();
-    virtual void proceed2();
-    virtual void proceed3();
+    virtual void init_cells();
 
 public:
     context ctx;
-    observable* diffs;
-    TCanvas** c_Diffs;      //!
+    std::unique_ptr<observable> cells;
+    TCanvas** c_cells;      //!
     TObjArray* objectsFits; //!
 
 private:
@@ -409,22 +436,27 @@ template <class T> auto bin_normalization(T* fac) -> void
     fac->transform([](TH1* h) { h->Scale(1.0 / (h->GetXaxis()->GetBinWidth(1) * h->GetYaxis()->GetBinWidth(1))); });
 }
 
-template <class T> auto apply_ang_distribution(T* fac, double a2, double a4, double corr_a2, double corr_a4) -> void
+/// Apply angula distribution to a histograms. Makes sens only if the x-axis is a cosTheta in cm frame of the system in
+/// which the distribution exists.
+/// @param fac the midas::distribution object
+/// @param a2,a4 the paramaters
+template <class T>
+auto apply_ang_distribution(T* fac, double a2, double a4, double corr_a2 = 0.0, double corr_a4 = 0.0) -> void
 {
     fac->transform(
         [&](TH1* h)
         {
-            auto f = std::unique_ptr<TF1>(new TF1("local_legpol", "angdist", -1, 1));
-            f->SetParameter(0, 1.0);
-            f->SetParameter(1, a2);
-            f->SetParameter(2, a4);
+            TF1 f("local_legpol", "angdist", -1, 1);
+            f.SetParameter(0, 1.0);
+            f.SetParameter(1, a2);
+            f.SetParameter(2, a4);
 
             bool has_corr = false;
-            TF1* f_corr = nullptr;
+            std::unique_ptr<TF1> f_corr;
             if (corr_a2 != 0.0 or corr_a4 != 0.0)
             {
                 has_corr = true;
-                f_corr = new TF1("local_legpol_corr", "angdist", -1, 1);
+                f_corr = std::unique_ptr<TF1>(new TF1("local_legpol_corr", "angdist", -1, 1));
 
                 f_corr->SetParameter(0, 1.0);
                 f_corr->SetParameter(1, corr_a2);
@@ -441,7 +473,7 @@ template <class T> auto apply_ang_distribution(T* fac, double a2, double a4, dou
                 auto bin_w = bin_r - bin_l;
                 auto corr_factor = 1.0;
 
-                auto angmap = f->Integral(bin_l, bin_r);
+                auto angmap = f.Integral(bin_l, bin_r);
 
                 if (has_corr) { corr_factor = f_corr->Integral(bin_l, bin_r); }
                 else { angmap /= bin_w; }
@@ -453,7 +485,6 @@ template <class T> auto apply_ang_distribution(T* fac, double a2, double a4, dou
                     h->SetBinContent(x, y, tmp_val * scaling_factor);
                 }
             }
-            if (f_corr) f_corr->Delete();
         });
 }
 

@@ -69,4 +69,10 @@ auto axis_config::print() const -> void
     }
 }
 
+auto axis_config::validate() const -> void
+{
+    if (!var) throw std::runtime_error("The axis variable is not set");
+    if (!bins) throw std::runtime_error("No axis bins specified");
+}
+
 } // namespace midas

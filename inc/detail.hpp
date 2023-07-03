@@ -91,6 +91,13 @@ constexpr auto dim_to_int(dimension dim) -> int
 
 auto copyHistogram(TH1* src, TH1* dst, bool with_functions = true) -> bool;
 
+struct json_file_info {
+    bool found;
+    TString path;
+};
+
+auto find_json_file(const char* initial_path, const char* filename, int search_depth = -1) -> json_file_info;
+
 auto jsonReadTStringKey(const Json::Value& jsondata, const char* key, TString& target) -> bool;
 auto jsonReadIntKey(const Json::Value& jsondata, const char* key, int& target) -> bool;
 auto jsonReadUIntKey(const Json::Value& jsondata, const char* key, uint& target) -> bool;

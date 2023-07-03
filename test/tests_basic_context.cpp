@@ -2,7 +2,7 @@
 
 #include "midas.hpp"
 
-TEST(TestsContext, CreationByDim)
+TEST(TestsBasicContext, CreationByDim)
 {
     auto ctx1 = midas::basic_context("test", midas::dimension::DIM1);
     ctx1.get_x();
@@ -20,7 +20,7 @@ TEST(TestsContext, CreationByDim)
     ctx3.get_z();
 }
 
-TEST(TestsContext, CreationByAxes)
+TEST(TestsBasicContext, CreationByAxes)
 {
     midas::axis_config x;
     midas::axis_config y;
@@ -42,7 +42,7 @@ TEST(TestsContext, CreationByAxes)
     ctx3.get_z();
 }
 
-TEST(TestsContext, Updating)
+TEST(TestsBasicContext, Updating)
 {
     auto ctx = midas::basic_context("test", midas::dimension::DIM3);
     ctx.get_x().set_label("d2_x").set_unit("mm");
@@ -65,7 +65,7 @@ TEST(TestsContext, Updating)
     ASSERT_TRUE(ctx == ctx);
 }
 
-TEST(TestsContext, Extend)
+TEST(TestsBasicContext, Extend)
 {
     auto ctx = midas::basic_context("test", midas::dimension::NODIM);
     ASSERT_THROW(ctx.get_x(), midas::dimension_error);
@@ -90,7 +90,7 @@ TEST(TestsContext, Extend)
     ASSERT_THROW(ctx.extend(), midas::dimension_error);
 }
 
-TEST(TestsContext, Reduce)
+TEST(TestsBasicContext, Reduce)
 {
     auto ctx = midas::basic_context("test", midas::dimension::DIM3);
     ASSERT_NO_THROW(ctx.get_x());
@@ -113,7 +113,7 @@ TEST(TestsContext, Reduce)
     ASSERT_THROW(ctx2.reduce(), midas::dimension_error);
 }
 
-TEST(TestsContext, ReduceAndExtend)
+TEST(TestsBasicContext, ReduceAndExtend)
 {
     midas::axis_config x;
     x.set_bins(10, -10, 10);
@@ -141,7 +141,28 @@ TEST(TestsContext, ReduceAndExtend)
     ASSERT_EQ(ctx.get_z().get_max(), 0.0f);
 }
 
-TEST(TestsContext, Comapre)
+TEST(TestsBasicContext, Expand)
+{
+    midas::axis_config x;
+    x.set_bins(10, -10, 10);
+
+    midas::axis_config y;
+    y.set_bins(20, -20, 20);
+
+    midas::axis_config z;
+    z.set_bins(30, -30, 30);
+
+    auto ctx = midas::basic_context("test", x, y, z);
+
+    midas::axis_config v;
+    v.set_bins(100, 0, 100);
+
+    auto vctx = ctx.expand(v);
+    
+    ASSERT_EQ(vctx.get_v().get_bins(), 100);
+}
+
+TEST(TestsBasicContext, Compare)
 {
     midas::axis_config x;
     x.set_bins(10, -10, 10);

@@ -8,16 +8,16 @@
 
 #include <fmt/core.h>
 
-class TestsDistribution : public ::testing::Test
+class TestsBasicDistribution : public ::testing::Test
 {
 protected:
     void SetUp() override
     {
         // q0_ remains empty
         ctx_3d = std::unique_ptr<midas::basic_context>(new midas::basic_context("ctx_d3", midas::dimension::DIM3));
-        ctx_3d->get_x().set_bins(4, -10, 10).set_label("a3_x").set_unit("cm");
-        ctx_3d->get_y().set_bins(3, -10, 10).set_label("a3_y").set_unit("mm");
-        ctx_3d->get_z().set_bins(2, -10, 10).set_label("a3_z").set_unit("um");
+        ctx_3d->get_x().set_bins(4, -10, 10).set_label("a3_x").set_unit("cm").set_variable(&dummy_var);
+        ctx_3d->get_y().set_bins(3, -10, 10).set_label("a3_y").set_unit("mm").set_variable(&dummy_var);
+        ctx_3d->get_z().set_bins(2, -10, 10).set_label("a3_z").set_unit("um").set_variable(&dummy_var);
 
         ctx_2d = std::unique_ptr<midas::basic_context>(
             new midas::basic_context(ctx_3d->cast("ctx_2d", midas::dimension::DIM2)));
@@ -27,6 +27,10 @@ protected:
         fac_1d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(ctx_1d.get()));
         fac_2d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(ctx_2d.get()));
         fac_3d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(ctx_3d.get()));
+
+        fac_1d->prepare();
+        fac_2d->prepare();
+        fac_3d->prepare();
     }
 
     // void TearDown() override {}
@@ -38,11 +42,22 @@ protected:
     std::unique_ptr<midas::basic_distribution> fac_1d;
     std::unique_ptr<midas::basic_distribution> fac_2d;
     std::unique_ptr<midas::basic_distribution> fac_3d;
+
+    Float_t dummy_var;
 };
 
-TEST_F(TestsDistribution, Initialization) {}
+TEST_F(TestsBasicDistribution, Initialization)
+{
+    fac_3d->transform(
+        [&](TH1* h)
+        {
+            ASSERT_EQ(h->GetNbinsX(), ctx_3d->get_x().get_bins());
+            ASSERT_EQ(h->GetNbinsY(), ctx_3d->get_y().get_bins());
+            ASSERT_EQ(h->GetNbinsZ(), ctx_3d->get_z().get_bins());
+        });
+}
 
-TEST_F(TestsDistribution, Scale)
+TEST_F(TestsBasicDistribution, Scale)
 {
     fac_1d->transform([](TH1* h) { h->FillRandom("gaus"); });
 
@@ -58,7 +73,7 @@ TEST_F(TestsDistribution, Scale)
     fac_3d->finalize();
 }
 
-// TEST_F(TestsDistribution, FillTest)
+// TEST_F(TestsBasicDistribution, FillTest)
 // {
 //
 //     ASSERT_EQ(ctx_2d.get_x().get_bins(), edm->getBinsX());
@@ -72,7 +87,7 @@ TEST_F(TestsDistribution, Scale)
 //     ASSERT_EQ(ctx_3d.get_z().get_bins(), edm->getBinsZ());
 // }
 //
-// TEST_F(TestsDistribution, WriteTest)
+// TEST_F(TestsBasicDistribution, WriteTest)
 // {
 //     ASSERT_EQ(true, 0 != fac_2d.ctx.validate());
 //     ASSERT_EQ(true, fac_2d.ctx.update());
@@ -91,7 +106,7 @@ TEST_F(TestsDistribution, Scale)
 //     file->Close();
 // }
 //
-// TEST_F(TestsDistribution, ReadTest)
+// TEST_F(TestsBasicDistribution, ReadTest)
 // {
 //     TFile* file = TFile::Open("/tmp/res.root", "OPEN");
 //     if (!file or !file->IsOpen())
