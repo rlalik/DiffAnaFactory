@@ -158,7 +158,7 @@ TEST(TestsBasicContext, Expand)
     v.set_bins(100, 0, 100);
 
     auto vctx = ctx.expand(v);
-    
+
     ASSERT_EQ(vctx.get_v().get_bins(), 100);
 }
 

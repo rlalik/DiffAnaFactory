@@ -38,8 +38,8 @@ namespace midas
 {
 
 observable::observable(dimension dist_dim, const std::string& ctx_name, TH1* hist, const axis_config& v_axis,
-                       const std::string& dir_and_name)
-    : RT::Pandora(""), dim(dist_dim), axis(v_axis), prefix_name(dir_and_name), ref_hist(hist)
+                       const std::string& dir_and_name, RT::Pandora* sf)
+    : box(sf), dim(dist_dim), axis(v_axis), prefix_name(dir_and_name), ref_hist(hist)
 {
     nbins_x = hist->GetNbinsX();
     nbins_y = hist->GetNbinsY();
@@ -48,31 +48,30 @@ observable::observable(dimension dist_dim, const std::string& ctx_name, TH1* his
 
     histograms = new TH1D*[nhists];
     if (dimension::DIM1 == dim)
+    {
+        ncanvases = 1;
         map1D(axis);
+    }
     else if (dimension::DIM2 == dim)
+    {
+        ncanvases = nbins_x;
         map2D(axis);
+    }
     else if (dimension::DIM3 == dim)
+    {
+        ncanvases = nbins_x * nbins_y;
         map3D(axis);
-
-    //   objectsFits = new TObjArray();
-    // 	objectsFits->SetName(ctx.histPrefix + "Fits");
-}
-
-observable::observable(dimension dist_dim, const std::string& ctx_name, TH1* hist, const axis_config& v_axis,
-                       const std::string& dir_and_name, RT::Pandora* sf)
-    : observable(dist_dim, ctx_name, hist, v_axis, dir_and_name)
-{
-    setSource(sf->getSource());
-    setSourceName(sf->getSourceName());
-    setTarget(sf->getTarget());
-    setTargetName(sf->getTargetName());
-    chdir(sf->directory_name().c_str());
-    rename(sf->objects_name().c_str());
+    }
 }
 
 observable::~observable()
 {
     gSystem->ProcessEvents();
+
+    for (int i = 0; i < ncanvases; ++i)
+        delete canvases[i];
+    delete[] canvases;
+
     for (int i = 0; i < nhists; ++i)
         delete histograms[i];
     delete[] histograms;
@@ -124,25 +123,25 @@ auto observable::map1D(const axis_config& v_axis) -> void
         auto fname = formatName(i);
         if (v_axis.get_bins_array())
         {
-            histograms[getBin(i)] = RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
-                                                  v_axis.get_bins(), v_axis.get_bins_array());
+            histograms[getBin(i)] = box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
+                                                       v_axis.get_bins(), v_axis.get_bins_array());
         }
         else
         {
-            histograms[getBin(i)] = RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
-                                                  v_axis.get_bins(), v_axis.get_min(), v_axis.get_max());
+            histograms[getBin(i)] = box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
+                                                       v_axis.get_bins(), v_axis.get_min(), v_axis.get_max());
         }
     }
 
     auto fname = formatCanvasName(0);
-    canvases = new TCanvas*[1];
-    canvases[0] = RegCanvas(fname.Data(), fname.Data(), 800, 600);
+    canvases = new TCanvas*[ncanvases];
+    canvases[0] = box->RegCanvas(fname.Data(), fname.Data(), 800, 600);
     canvases[0]->DivideSquare(nbins_x);
 }
 
 auto observable::map2D(const axis_config& v_axis) -> void
 {
-    canvases = new TCanvas*[nbins_x];
+    canvases = new TCanvas*[ncanvases];
 
     for (Int_t i = 0; i < nbins_x; ++i)
     {
@@ -151,24 +150,24 @@ auto observable::map2D(const axis_config& v_axis) -> void
             auto fname = formatName(i, j);
             if (v_axis.get_bins_array())
             {
-                histograms[getBin(i, j)] = RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
-                                                         v_axis.get_bins(), v_axis.get_bins_array());
+                histograms[getBin(i, j)] = box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
+                                                              v_axis.get_bins(), v_axis.get_bins_array());
             }
             else
             {
-                histograms[getBin(i, j)] = RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
-                                                         v_axis.get_bins(), v_axis.get_min(), v_axis.get_max());
+                histograms[getBin(i, j)] = box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
+                                                              v_axis.get_bins(), v_axis.get_min(), v_axis.get_max());
             }
         }
         auto fname = formatCanvasName(i);
-        canvases[i] = RegCanvas(fname.Data(), fname.Data(), 800, 600);
+        canvases[i] = box->RegCanvas(fname.Data(), fname.Data(), 800, 600);
         canvases[i]->DivideSquare(nbins_y);
     }
 }
 
 auto observable::map3D(const axis_config& v_axis) -> void
 {
-    canvases = new TCanvas*[nbins_x * nbins_y];
+    canvases = new TCanvas*[ncanvases];
 
     for (Int_t i = 0; i < nbins_x; ++i)
     {
@@ -179,17 +178,19 @@ auto observable::map3D(const axis_config& v_axis) -> void
                 auto fname = formatName(i, j, k);
                 if (v_axis.get_bins_array())
                 {
-                    histograms[getBin(i, j, k)] = RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
-                                                                v_axis.get_bins(), v_axis.get_bins_array());
+                    histograms[getBin(i, j, k)] =
+                        box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()), v_axis.get_bins(),
+                                           v_axis.get_bins_array());
                 }
                 else
                 {
-                    histograms[getBin(i, j, k)] = RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
-                                                                v_axis.get_bins(), v_axis.get_min(), v_axis.get_max());
+                    histograms[getBin(i, j, k)] =
+                        box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()), v_axis.get_bins(),
+                                           v_axis.get_min(), v_axis.get_max());
                 }
             }
             auto fname = formatCanvasName(i, j);
-            canvases[i + j * nbins_x] = RegCanvas(fname.Data(), fname.Data(), 800, 600);
+            canvases[i + j * nbins_x] = box->RegCanvas(fname.Data(), fname.Data(), 800, 600);
             canvases[i + j * nbins_x]->DivideSquare(nbins_z);
         }
     }
@@ -241,14 +242,14 @@ auto observable::formatCanvasName(Int_t x, Int_t y) -> TString
 // 	return *nthis;
 // }
 
-auto observable::get(Int_t x, Int_t y, Int_t z) -> TH1D*
+auto observable::get_hist(Int_t x, Int_t y, Int_t z) -> TH1D*
 {
     if (x >= nbins_x or y >= nbins_y or z >= nbins_z) return nullptr;
 
     return histograms[getBin(x, y, z)];
 }
 
-auto observable::getCanvas(Int_t x, Int_t y) -> TCanvas*
+auto observable::get_canvas(Int_t x, Int_t y) -> TCanvas*
 {
     if (dimension::DIM3 == dim)
     {
@@ -266,9 +267,9 @@ auto observable::getCanvas(Int_t x, Int_t y) -> TCanvas*
     return canvases[0];
 }
 
-auto observable::getPad(Int_t x, Int_t y, Int_t z) -> TVirtualPad*
+auto observable::get_pad(Int_t x, Int_t y, Int_t z) -> TVirtualPad*
 {
-    TCanvas* can = getCanvas(x, y);
+    TCanvas* can = get_canvas(x, y);
 
     if (dim == dimension::DIM3) return can->GetPad(1 + z);
     if (dim == dimension::DIM2) return can->GetPad(1 + y);
@@ -277,7 +278,7 @@ auto observable::getPad(Int_t x, Int_t y, Int_t z) -> TVirtualPad*
     return can->GetPad(0);
 }
 
-TH1D* observable::find(Double_t x, Double_t y, Double_t z)
+TH1D* observable::find_hist(Double_t x, Double_t y, Double_t z)
 {
     auto bin = ref_hist->FindBin(x, y, z);
     Int_t bx, by, bz;
@@ -308,6 +309,11 @@ auto observable::Fill3D(Float_t x, Float_t y, Float_t z, Float_t v, Float_t w) -
     ref_hist->GetBinXYZ(bin, bx, by, bz);
     if (bx > 0 && bx <= nbins_x && by > 0 && by <= nbins_y && bz > 0 && bz <= nbins_z)
         histograms[getBin(bx - 1, by - 1, bz - 1)]->Fill(v, w);
+}
+
+auto observable::print() const -> void
+{
+    fmt::print(" Observable: bins x={}  y={}  z={}\n", nbins_x, nbins_y, nbins_z);
 }
 
 } // namespace midas

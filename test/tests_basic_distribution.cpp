@@ -24,9 +24,9 @@ protected:
         ctx_1d = std::unique_ptr<midas::basic_context>(
             new midas::basic_context(ctx_2d->cast("ctx_1d", midas::dimension::DIM1)));
 
-        fac_1d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(ctx_1d.get()));
-        fac_2d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(ctx_2d.get()));
-        fac_3d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(ctx_3d.get()));
+        fac_1d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(*ctx_1d.get()));
+        fac_2d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(*ctx_2d.get()));
+        fac_3d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(*ctx_3d.get()));
 
         fac_1d->prepare();
         fac_2d->prepare();

@@ -20,6 +20,26 @@ TEST(TestsContext, CreationByDim)
     ctx3.get_z();
 }
 
+TEST(TestsContext, CreationByDimWithV)
+{
+    midas::axis_config v;
+
+    auto ctx1 = midas::context("test", midas::dimension::DIM1, v);
+    ctx1.get_x();
+    ASSERT_THROW(ctx1.get_y(), midas::dimension_error);
+    ASSERT_THROW(ctx1.get_z(), midas::dimension_error);
+
+    auto ctx2 = midas::context("test", midas::dimension::DIM2, v);
+    ctx2.get_x();
+    ctx2.get_y();
+    ASSERT_THROW(ctx2.get_z(), midas::dimension_error);
+
+    auto ctx3 = midas::context("test", midas::dimension::DIM3, v);
+    ctx3.get_x();
+    ctx3.get_y();
+    ctx3.get_z();
+}
+
 TEST(TestsContext, CreationByAxes)
 {
     midas::axis_config x;
@@ -129,7 +149,7 @@ TEST(TestsContext, ReduceAndExtend)
     z.set_bins(30, -30, 30);
 
     midas::axis_config v;
-    z.set_bins(100, -100, 100);
+    v.set_bins(100, -100, 100);
 
     auto ctx = midas::context("test", x, y, z, v);
     ctx.reduce(); // to DIM2
@@ -159,17 +179,20 @@ TEST(TestsContext, Compare)
     midas::axis_config z;
     z.set_bins(30, -30, 30);
 
-    auto ctx1 = midas::context("test", x);
-    auto ctx1_1 = midas::context("test", x);
-    auto ctx1_2 = midas::context("test", y);
+    midas::axis_config v;
+    v.set_bins(100, -100, 100);
 
-    auto ctx2 = midas::context("test", x, y);
-    auto ctx2_1 = midas::context("test", x, y);
-    auto ctx2_2 = midas::context("test", y, z);
+    auto ctx1 = midas::context("test", x, v);
+    auto ctx1_1 = midas::context("test", x, v);
+    auto ctx1_2 = midas::context("test", y, v);
 
-    auto ctx3 = midas::context("test", x, y, z);
-    auto ctx3_1 = midas::context("test", x, y, z);
-    auto ctx3_2 = midas::context("test", y, z, x);
+    auto ctx2 = midas::context("test", x, y, v);
+    auto ctx2_1 = midas::context("test", x, y, v);
+    auto ctx2_2 = midas::context("test", y, z, v);
+
+    auto ctx3 = midas::context("test", x, y, z, v);
+    auto ctx3_1 = midas::context("test", x, y, z, v);
+    auto ctx3_2 = midas::context("test", y, z, x, v);
 
     ASSERT_TRUE(ctx1 == ctx1);
     ASSERT_TRUE(ctx1 == ctx1_1);

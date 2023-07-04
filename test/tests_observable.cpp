@@ -29,8 +29,9 @@ TEST(TestObservable, Index)
     ASSERT_EQ(1, by);
     ASSERT_EQ(0, bz);
 
+    RT::Pandora box("edm_test");
     auto edm2 = std::unique_ptr<midas::observable>(
-        new midas::observable(midas::dimension::DIM2, "edm2", h2.get(), axis, "edm2"));
+        new midas::observable(midas::dimension::DIM2, "edm2", h2.get(), axis, "edm2", &box));
     Int_t mapped_bin = edm2->getBin(bx - 1, by - 1, 0);
     ASSERT_EQ(0, mapped_bin);
 }
@@ -55,28 +56,29 @@ TEST(TestObservable, Fill)
     auto h2 = std::unique_ptr<TH2D>(new TH2D("h2", "h2", bins, min, max, bins, min, max));
     auto h3 = std::unique_ptr<TH3D>(new TH3D("h3", "h3", bins, min, max, bins, min, max, bins, min, max));
 
+    RT::Pandora box("edm_test");
     auto edm1 = std::unique_ptr<midas::observable>(
-        new midas::observable(midas::dimension::DIM1, "edm1", h1.get(), axis, "edm1"));
+        new midas::observable(midas::dimension::DIM1, "edm1", h1.get(), axis, "edm1", &box));
     auto edm2 = std::unique_ptr<midas::observable>(
-        new midas::observable(midas::dimension::DIM2, "edm2", h2.get(), axis, "edm2"));
+        new midas::observable(midas::dimension::DIM2, "edm2", h2.get(), axis, "edm2", &box));
     auto edm3 = std::unique_ptr<midas::observable>(
-        new midas::observable(midas::dimension::DIM3, "edm3", h3.get(), axis, "edm3"));
+        new midas::observable(midas::dimension::DIM3, "edm3", h3.get(), axis, "edm3", &box));
 
     for (int i = 0; i < bins; ++i)
     {
-        ASSERT_TRUE(edm1->get(i));
-        edm1->get(i)->FillRandom("gaus", 10000);
-        ASSERT_TRUE(abs(edm1->get(i)->GetMean()) < 0.05);
+        ASSERT_TRUE(edm1->get_hist(i));
+        edm1->get_hist(i)->FillRandom("gaus", 10000);
+        ASSERT_TRUE(abs(edm1->get_hist(i)->GetMean()) < 0.05);
         for (int j = 0; j < bins; ++j)
         {
-            ASSERT_TRUE(edm2->get(i, j));
-            edm2->get(i, j)->FillRandom("gaus", 10000);
-            ASSERT_TRUE(abs(edm2->get(j)->GetMean()) < 0.05);
+            ASSERT_TRUE(edm2->get_hist(i, j));
+            edm2->get_hist(i, j)->FillRandom("gaus", 10000);
+            ASSERT_TRUE(abs(edm2->get_hist(i, j)->GetMean()) < 0.05);
             for (int k = 0; k < bins; ++k)
             {
-                ASSERT_TRUE(edm3->get(i, j, k));
-                edm3->get(i, j, k)->FillRandom("gaus", 10000);
-                ASSERT_TRUE(abs(edm3->get(k)->GetMean()) < 0.05);
+                ASSERT_TRUE(edm3->get_hist(i, j, k));
+                edm3->get_hist(i, j, k)->FillRandom("gaus", 10000);
+                ASSERT_TRUE(abs(edm3->get_hist(i, j, k)->GetMean()) < 0.05);
             }
         }
     }
@@ -95,12 +97,13 @@ TEST(TestObservable, Reverse)
     auto h2 = std::unique_ptr<TH2D>(new TH2D("h2", "h2", bins, min, max, bins, min, max));
     auto h3 = std::unique_ptr<TH3D>(new TH3D("h3", "h3", bins, min, max, bins, min, max, bins, min, max));
 
+    RT::Pandora box("edm_test");
     auto edm1 = std::unique_ptr<midas::observable>(
-        new midas::observable(midas::dimension::DIM1, "edm1", h1.get(), axis, "edm1"));
+        new midas::observable(midas::dimension::DIM1, "edm1", h1.get(), axis, "edm1", &box));
     auto edm2 = std::unique_ptr<midas::observable>(
-        new midas::observable(midas::dimension::DIM2, "edm2", h2.get(), axis, "edm2"));
+        new midas::observable(midas::dimension::DIM2, "edm2", h2.get(), axis, "edm2", &box));
     auto edm3 = std::unique_ptr<midas::observable>(
-        new midas::observable(midas::dimension::DIM3, "edm3", h3.get(), axis, "edm3"));
+        new midas::observable(midas::dimension::DIM3, "edm3", h3.get(), axis, "edm3", &box));
 
     Int_t x, y, z;
 

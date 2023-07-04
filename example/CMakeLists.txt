@@ -1,5 +1,5 @@
-add_executable(example_write example_write.cpp)
-target_link_libraries(example_write Midas::Midas)
+add_executable(example_create example_create.cpp)
+target_link_libraries(example_create Midas::Midas ${FMT_TARGET})
 
 add_executable(example_read example_read.cpp)
 target_link_libraries(example_read RT::Pandora Midas::Midas)

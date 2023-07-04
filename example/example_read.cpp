@@ -1,5 +1,6 @@
-#include <Pandora.h>
+#include <midas.hpp>
 
+#include <TCanvas.h>
 #include <TFile.h>
 #include <TH1.h>
 
@@ -10,26 +11,27 @@
 int main()
 {
     // create factory
-    RT::Pandora* fac = new RT::Pandora("factory1");
+    RT::Pandora box("pcm_costhcm");
 
     // import from file and register in the factory
     // data will be stored in memory, file remains open
-    TFile* f = fac->importStructure("example.root");
+    auto f = box.importStructure("output.root");
+
+    if (!f) return -1;
 
     // list of registered objects
-    fac->listRegisteredObjects();
+    // box.listRegisteredObjects();
 
-    // you can fetch specific object by its name
-    TH1F* h1 = dynamic_cast<TH1F*>(fac->getObject("dir1/hist1"));
-    TH1F* h2 = dynamic_cast<TH1F*>(fac->getObject("hist2"));
-    TH1F* h3 = dynamic_cast<TH1F*>(fac->getObject("hist3", "dir1/dir2"));
-    TH1F* h4 = dynamic_cast<TH1F*>(fac->getObject("@@@d/hist_@@@a_placeholders"));
-
-    // if failed, then objects are not read from file
-    assert(h1 != nullptr);
-    assert(h2 != nullptr);
-    assert(h3 != nullptr);
-    assert(h4 != nullptr);
+    auto* ctx = dynamic_cast<midas::context*>(box.getObject("pcm_costhcm_midas_ctx"));
+    if (ctx)
+    {
+        ctx->print();
+        auto fac = midas::distribution(*ctx);
+        fac.importStructure(f, true);
+        fac.prepare();
+        fac.transform([](TH1* h) { h->Print(); });
+        fac.transform([](TCanvas* c) { c->Print(); });
+    }
 
     // file must be closed by user
     f->Close();

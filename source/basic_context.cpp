@@ -123,92 +123,92 @@ auto basic_context::expand(axis_config extra_dim) -> context
     return vctx;
 }
 
-bool basic_context::configureFromJson(const char* ctx_name)
-{
-    std::ifstream ifs(json_fn.Data());
-    if (!ifs.is_open()) return false;
-
-    fmt::print("  Found JSON config file for {}\n", ctx_name);
-    Json::Value ana, cfg, axis;
-    Json::Reader reader;
-
-    bool parsing_success = reader.parse(ifs, ana);
-
-    if (!parsing_success)
-    {
-        fmt::print("  Parsing failed\n");
-        return false;
-    }
-    else
-        fmt::print("  Parsing successfull\n");
-
-    if (!ana.isMember(ctx_name))
-    {
-        fmt::print("  No data for {}\n", ctx_name);
-        return false;
-    }
-
-    cfg = ana[ctx_name];
-
-    const size_t axis_num = 3;
-    const char* axis_labels[axis_num] = {"x", "y", "z"};
-    axis_config* axis_ptrs[axis_num] = {&x, &y, &z};
-
-    for (uint i = 0; i < axis_num; ++i)
-    {
-        if (!cfg.isMember(axis_labels[i])) continue;
-
-        axis = cfg[axis_labels[i]];
-
-        // 		jsonReadIntKey(axis, "bins", axis_ptrs[i]->bins);
-        Int_t bins;
-        detail::jsonReadIntKey(axis, "bins", bins);
-        Float_t min, max;
-        detail::jsonReadFloatKey(axis, "min", min);
-        detail::jsonReadFloatKey(axis, "max", max);
-        // 		jsonReadTStringKey(axis, "title", axis_ptrs[i]->title);
-        TString label, unit;
-        detail::jsonReadTStringKey(axis, "label", label);
-        detail::jsonReadTStringKey(axis, "unit", unit);
-
-        axis_ptrs[i]->set_bins(bins, min, max).set_label(label).set_unit(unit);
-    }
-
-    ifs.close();
-    return true;
-}
-
-bool basic_context::configureToJson(const char* ctx_name, const char* jsonfile)
-{
-    (void)jsonfile;
-
-    Json::Value ana, cfg, axis;
-
-    cfg["title"] = "d^{2}N/dp_{t}dy.{cm}";
-
-    axis["bins"] = 0;
-    axis["min"] = 0;
-    axis["max"] = 0;
-    axis["label"] = "";
-    axis["var"] = "";
-
-    cfg["x"] = axis;
-    cfg["y"] = axis;
-    cfg["z"] = axis;
-    cfg["V"] = axis;
-
-    ana[ctx_name] = cfg;
-
-    std::cout << ana;
-
-    // 	Json::StyledWriter sw;
-    // 	std::cout << sw.write(ana);
-
-    // 	Json::FastWriter fw;
-    // 	std::cout << fw.write(ana);
-
-    return true;
-}
+// bool basic_context::configureFromJson(const char* ctx_name)
+// {
+//     std::ifstream ifs(json_fn.Data());
+//     if (!ifs.is_open()) return false;
+//
+//     fmt::print("  Found JSON config file for {}\n", ctx_name);
+//     Json::Value ana, cfg, axis;
+//     Json::Reader reader;
+//
+//     bool parsing_success = reader.parse(ifs, ana);
+//
+//     if (!parsing_success)
+//     {
+//         fmt::print("  Parsing failed\n");
+//         return false;
+//     }
+//     else
+//         fmt::print("  Parsing successfull\n");
+//
+//     if (!ana.isMember(ctx_name))
+//     {
+//         fmt::print("  No data for {}\n", ctx_name);
+//         return false;
+//     }
+//
+//     cfg = ana[ctx_name];
+//
+//     const size_t axis_num = 3;
+//     const char* axis_labels[axis_num] = {"x", "y", "z"};
+//     axis_config* axis_ptrs[axis_num] = {&x, &y, &z};
+//
+//     for (uint i = 0; i < axis_num; ++i)
+//     {
+//         if (!cfg.isMember(axis_labels[i])) continue;
+//
+//         axis = cfg[axis_labels[i]];
+//
+//         // 		jsonReadIntKey(axis, "bins", axis_ptrs[i]->bins);
+//         Int_t bins;
+//         detail::jsonReadIntKey(axis, "bins", bins);
+//         Float_t min, max;
+//         detail::jsonReadFloatKey(axis, "min", min);
+//         detail::jsonReadFloatKey(axis, "max", max);
+//         // 		jsonReadTStringKey(axis, "title", axis_ptrs[i]->title);
+//         TString label, unit;
+//         detail::jsonReadTStringKey(axis, "label", label);
+//         detail::jsonReadTStringKey(axis, "unit", unit);
+//
+//         axis_ptrs[i]->set_bins(bins, min, max).set_label(label).set_unit(unit);
+//     }
+//
+//     ifs.close();
+//     return true;
+// }
+//
+// bool basic_context::configureToJson(const char* ctx_name, const char* jsonfile)
+// {
+//     (void)jsonfile;
+//
+//     Json::Value ana, cfg, axis;
+//
+//     cfg["title"] = "d^{2}N/dp_{t}dy.{cm}";
+//
+//     axis["bins"] = 0;
+//     axis["min"] = 0;
+//     axis["max"] = 0;
+//     axis["label"] = "";
+//     axis["var"] = "";
+//
+//     cfg["x"] = axis;
+//     cfg["y"] = axis;
+//     cfg["z"] = axis;
+//     cfg["V"] = axis;
+//
+//     ana[ctx_name] = cfg;
+//
+//     std::cout << ana;
+//
+//     // 	Json::StyledWriter sw;
+//     // 	std::cout << sw.write(ana);
+//
+//     // 	Json::FastWriter fw;
+//     // 	std::cout << fw.write(ana);
+//
+//     return true;
+// }
 
 // context& context::operator=(const context& ctx)
 // {
@@ -275,10 +275,10 @@ void basic_context::prepare()
 
     if (0 == dir_name.Length()) dir_name = hist_name;
 
-    if (name.EndsWith("Ctx"))
+    if (name.EndsWith("_midas_ctx"))
         SetName(name);
     else
-        SetName(name + "Ctx");
+        SetName(name + "_midas_ctx");
 
     TString hunit = "1/";
     if (dim >= dimension::DIM1)
@@ -336,14 +336,25 @@ TString basic_context::format_hist_axes(const char* title) const
         return TString::Format("%s;%s%s;Counts [aux]", title, x.get_label().Data(), x.format_unit().Data());
 }
 
-void basic_context::print() const
+auto basic_context::print() const -> void
 {
     fmt::print("Context: {}   Dimensions: {}\n", name.Data(), detail::dim_to_int(dim));
     fmt::print(" Name: {}   Hist name: {}   Dir Name: %s\n", name.Data(), hist_name.Data(), dir_name.Data());
     fmt::print(" Var name: {}\n", diff_label.Data());
+    fmt::print(" x");
     x.print();
-    if (dim > midas::dimension::DIM1) y.print();
-    if (dim > midas::dimension::DIM2) z.print();
+    if (dim > midas::dimension::DIM1)
+    {
+        fmt::print(" y");
+        y.print();
+    }
+    if (dim > midas::dimension::DIM2)
+    {
+        fmt::print(" z");
+        z.print();
+    }
 }
+
+auto basic_context::validate() const -> bool { return true; }
 
 }; // namespace midas

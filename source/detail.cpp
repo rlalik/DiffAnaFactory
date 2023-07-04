@@ -14,6 +14,22 @@ namespace midas
 namespace detail
 {
 
+auto dim_to_int(dimension dim) -> int
+{
+    switch (dim)
+    {
+        case dimension::DIM1:
+            return 1;
+        case dimension::DIM2:
+            return 2;
+        case dimension::DIM3:
+            return 3;
+        case dimension::NODIM:
+        default:
+            return 0;
+    }
+}
+
 auto copyHistogram(TH1* src, TH1* dst, bool with_functions) -> bool
 {
     if (!src or !dst) return false;
@@ -90,7 +106,7 @@ auto find_json_file(const char* initial_path, const char* filename, int search_d
     return json_file;
 }
 
-auto jsonReadTStringKey(const Json::Value& jsondata, const char* key, TString& target) -> bool
+auto json_read_TString_key(const Json::Value& jsondata, const char* key, TString& target) -> bool
 {
     if (jsondata.isMember(key))
     {
@@ -101,7 +117,7 @@ auto jsonReadTStringKey(const Json::Value& jsondata, const char* key, TString& t
     return false;
 }
 
-auto jsonReadIntKey(const Json::Value& jsondata, const char* key, int& target) -> bool
+auto json_read_int_key(const Json::Value& jsondata, const char* key, int& target) -> bool
 {
     if (jsondata.isMember(key))
     {
@@ -112,7 +128,7 @@ auto jsonReadIntKey(const Json::Value& jsondata, const char* key, int& target) -
     return false;
 }
 
-auto jsonReadUIntKey(const Json::Value& jsondata, const char* key, uint& target) -> bool
+auto json_read_uint_key(const Json::Value& jsondata, const char* key, uint& target) -> bool
 {
     if (jsondata.isMember(key))
     {
@@ -123,7 +139,7 @@ auto jsonReadUIntKey(const Json::Value& jsondata, const char* key, uint& target)
     return false;
 }
 
-auto jsonReadFloatKey(const Json::Value& jsondata, const char* key, float& target) -> bool
+auto json_read_float_key(const Json::Value& jsondata, const char* key, float& target) -> bool
 {
     if (jsondata.isMember(key))
     {
@@ -134,7 +150,7 @@ auto jsonReadFloatKey(const Json::Value& jsondata, const char* key, float& targe
     return false;
 }
 
-auto jsonReadDoubleKey(const Json::Value& jsondata, const char* key, double& target) -> bool
+auto json_read_double_key(const Json::Value& jsondata, const char* key, double& target) -> bool
 {
     if (jsondata.isMember(key))
     {

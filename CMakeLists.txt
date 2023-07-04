@@ -60,10 +60,10 @@ add_library(
 )
 add_library(Midas::Midas ALIAS Midas)
 
-target_link_libraries(Midas PUBLIC ROOT::Core ROOT::Gpad RT::Pandora PRIVATE HelloFitty::HelloFitty jsoncpp)
+target_link_libraries(Midas PUBLIC ROOT::Core ROOT::Gpad RT::Pandora PRIVATE HelloFitty::HelloFitty $<BUILD_INTERFACE:jsoncpp>)
 
 if (fmt_FETCHED)
-  set(FMT_TARGET fmt::fmt-header-only)
+  set(FMT_TARGET $<BUILD_INTERFACE:fmt::fmt-header-only>)
 else()
   set(FMT_TARGET fmt::fmt)
 endif()
@@ -144,7 +144,7 @@ if(NOT Midas_DEVELOPER_MODE)
 elseif(NOT PROJECT_IS_TOP_LEVEL)
   message(
       AUTHOR_WARNING
-      "Developer mode is intended for developers of HelloFitty"
+      "Developer mode is intended for developers of Midas"
   )
 endif()
 
@@ -178,6 +178,7 @@ Executable      ${CMAKE_EXE_LINKER_FLAGS}
 Module          ${CMAKE_MODULE_LINKER_FLAGS}
 Shared          ${CMAKE_SHARED_LINKER_FLAGS}\n")
 
-foreach(p LIB BIN INCLUDE CMAKE)
+foreach(p LIB BIN INCLUDE)
   message(STATUS "CMAKE_INSTALL_${p}DIR: ${CMAKE_INSTALL_${p}DIR}")
 endforeach()
+message(STATUS "Midas_INSTALL_CMAKEDIR: ${Midas_INSTALL_CMAKEDIR}")

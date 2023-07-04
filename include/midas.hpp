@@ -54,12 +54,18 @@ public:
 
 /// Stores pointer to a variable and histogram description in means of bins, range
 /// (or array of bins) and also axis description like label and unit.
-class MIDAS_EXPORT axis_config final
+class MIDAS_EXPORT axis_config final : public TObject
 {
 public:
     axis_config();
     /// @param ptr the variable pointer
     axis_config(Float_t* ptr) : var(ptr) {}
+    axis_config(const axis_config&) = default;
+    axis_config(axis_config&&) = default;
+    virtual ~axis_config() = default;
+
+    auto operator=(const axis_config&) -> axis_config& = default;
+    auto operator=(axis_config&&) -> axis_config& = default;
 
     auto operator==(const axis_config& ctx) -> bool;
     auto operator!=(const axis_config& ctx) -> bool;
@@ -114,8 +120,8 @@ public:
     static auto format_unit(const char* unit) -> TString;
     static auto format_unit(const TString& unit) -> TString;
 
-    auto validate() const -> void;
     auto print() const -> void;
+    auto validate() const -> bool;
 
 private:
     TString label; // label for the axis
@@ -128,7 +134,7 @@ private:
     Double_t* bins_arr; //! here one can put custom bins division array
     Float_t delta;      //! CAUTION: overriden by validate(), do not set by hand
 
-    // ClassDef(axis_config, 1);
+    ClassDef(axis_config, 1)
 };
 
 enum class dimension
@@ -149,23 +155,8 @@ class observable;
 class MIDAS_EXPORT basic_context : public TNamed
 {
 protected:
-    dimension dim;        // context dimension
-    mutable TString name; // context name
-    TString dir_name;     // histograms directory
-    TString hist_name;    // histograms common name
-    TString diff_label;   // differential distribution variable name, e.g. d^2N/dxdy, etc...
-
-    TString context_title;
-    TString context_label;
-    TString context_unit;
-    TString context_axis_text;
-
-    axis_config x, y, z; // x..z are dimensions, V is an observable variable axis
-
-protected:
-    basic_context();
-
 public:
+    basic_context();
     /// Initialize context with name and the dimension
     /// @param context_name the context name
     /// @param context_dim the context dimension
@@ -237,34 +228,45 @@ public:
 
     virtual TString format_hist_axes(const char* title = nullptr) const;
 
-    virtual bool configureFromJson(const char* name);
-    virtual bool configureToJson(const char* name, const char* jsonfile);
+    // virtual bool configureFromJson(const char* name);
+    // virtual bool configureToJson(const char* name, const char* jsonfile);
 
     virtual auto prepare() -> void;
+
     virtual auto print() const -> void;
+    virtual auto validate() const -> bool;
 
 protected:
+    dimension dim;        // context dimension
+    mutable TString name; // context name
+    TString dir_name;     // histograms directory
+    TString hist_name;    // histograms common name
+    TString diff_label;   // differential distribution variable name, e.g. d^2N/dxdy, etc...
+
+    TString context_title;
+    TString context_label;
+    TString context_unit;
+    TString context_axis_text;
+
+    axis_config x, y, z; // x..z are dimensions, V is an observable variable axis
+
     TString json_fn;
     bool json_found;
 
     friend basic_distribution;
     friend distribution;
 
-    // ClassDef(distribution_context, 1);
+    ClassDef(basic_context, 1)
 };
 
 /// Advanced context which supports also v-axis, and axis for observable which can add additional constrains on the
 /// distribution. An example is to create a invariant mass spectrum of some particle to extract the signal in given bin.
 class MIDAS_EXPORT context : public basic_context
 {
-protected:
-    axis_config v; // x, y are two dimensions, V is a final Variable axis
-
 private:
-    context();
-
 public:
-    using basic_context::basic_context;
+    context();
+    context(TString name, dimension dim);
     context(TString name, dimension dim, axis_config v_axis);
     context(TString name, axis_config x_axis, axis_config v_axis);
     context(TString name, axis_config x_axis, axis_config y_axis, axis_config v_axis);
@@ -273,68 +275,77 @@ public:
     context(const context& ctx);
     virtual ~context();
 
-    context& operator=(const basic_context& ctx);
-    context& operator=(const context& ctx);
-    bool operator==(const context& ctx);
-    bool operator!=(const context& ctx);
-
     auto expand(axis_config extra_dim) -> context = delete;
 
     auto get_v() -> axis_config& { return v; }
     auto get_v() const -> const axis_config& { return v; }
 
-    virtual bool configureFromJson(const char* name);
-    virtual bool configureToJson(const char* name, const char* jsonfile);
+    context& operator=(const basic_context& ctx);
+    context& operator=(const context& ctx);
+    bool operator==(const context& ctx);
+    bool operator!=(const context& ctx);
 
-    virtual void prepare() override;
-    virtual void print() const override;
+    virtual auto prepare() -> void override;
+
+    virtual auto print() const -> void override;
+    virtual auto validate() const -> bool override;
+
+    // virtual bool configureFromJson(const char* name);
+    // virtual bool configureToJson(const char* name, const char* jsonfile);
 
 private:
+    axis_config v; // x, y are two dimensions, V is a final Variable axis
+
     TString json_fn;
 
     friend distribution;
     friend observable;
 
-    // ClassDef(DifferentialContext, 2);
+    ClassDefOverride(context, 1)
 };
 
 class MIDAS_EXPORT basic_distribution : public TObject, public RT::Pandora
 {
 protected:
-    basic_distribution();
+    // basic_distribution();
 
 public:
     basic_distribution(const basic_context& ctx);
-    basic_distribution(const basic_context* ctx);
     basic_distribution(const basic_distribution&) = delete;
     basic_distribution(basic_distribution&&) = default;
     virtual ~basic_distribution();
 
-    basic_distribution& operator=(const basic_distribution& fa) = delete;
-    basic_distribution& operator=(basic_distribution&&) = default;
+    auto operator=(const basic_distribution& fa) -> basic_distribution& = delete;
+    auto operator=(basic_distribution&&) -> basic_distribution& = default;
 
-    virtual auto reinit() -> void;
+    auto get_signal_hist() -> TH1* { return signal_histogram.get(); }
+
     virtual auto fill(Float_t weight = 1.0) -> void;
+    virtual auto prepare() -> void;
+    virtual auto reinit() -> void;
     virtual auto finalize(const char* draw_opts = nullptr) -> void;
+
+    virtual auto validate() const -> bool;
+    virtual auto print() const -> void;
 
     auto transform(std::function<void(TH1* h)> transform_function) -> void;
     auto transform(std::function<void(TCanvas* h)> transform_function) -> void;
 
-    virtual void prepare_canvas(const char* draw_opts = nullptr);
+    virtual auto prepare_canvas(const char* draw_opts = nullptr) -> void;
 
-    virtual void applyBinomErrors(TH1* N);
-    static void applyBinomErrors(TH1* q, TH1* N);
+    virtual auto applyBinomErrors(TH1* N) -> void;
+    static auto applyBinomErrors(TH1* q, TH1* N) -> void;
 
-    void setDrawOptions(const char* draw_opts) { drawOpts = draw_opts; }
+    auto set_draw_options(const char* draw_opts) -> void { drawOpts = draw_opts; }
 
-    virtual auto prepare() -> void;
-    virtual auto print() const -> void;
+    virtual auto save(TFile* f /* = nullptr*/, bool verbose = false) -> bool;
+    virtual auto save(const char* filename /* = nullptr*/, bool verbose = false) -> bool;
 
 protected:
-    virtual void rename(const char* newname);
-    virtual void chdir(const char* newdir);
+    virtual auto rename(const char* newname) -> void;
+    virtual auto chdir(const char* newdir) -> void;
 
-public:
+private:
     basic_context ctx; //||
 
     // #ifdef HAVE_HISTASYMMERRORS
@@ -342,8 +353,8 @@ public:
     // #else
     // 	TH2D * hSignalCounter;			//->	// discrete X-Y, signal extracted
     // #endif
-    std::unique_ptr<TH1> hSignalCounter;     //->	// discrete X-Y, signal extracted
-    std::unique_ptr<TCanvas> cSignalCounter; //->
+    std::unique_ptr<TH1> signal_histogram;  //->	// discrete X-Y, signal extracted
+    std::unique_ptr<TCanvas> signal_canvas; //->
 
 protected:
     TString drawOpts;
@@ -356,10 +367,11 @@ typedef void(FitCallback)(distribution* fac, basic_distribution* sigfac, int fit
 
 class MIDAS_EXPORT distribution : public basic_distribution
 {
+protected:
+    // distribution();
+
 public:
-    distribution();
     distribution(const context& ctx);
-    distribution(const context* ctx);
     distribution(const distribution&) = delete;
     distribution(distribution&&) = delete;
     virtual ~distribution();
@@ -367,12 +379,15 @@ public:
     auto operator=(const distribution& fa) -> distribution& = delete;
     auto operator=(distribution&& fa) -> distribution& = delete;
 
+    virtual auto fill(Float_t weight = 1.0) -> void override;
+
     virtual auto prepare() -> void override;
     virtual auto reinit() -> void override;
-    virtual auto fill(Float_t weight = 1.0) -> void override;
     virtual auto finalize(const char* draw_opts = nullptr) -> void override;
-
     virtual auto reset() -> void override;
+
+    virtual auto print() const -> void override;
+    virtual auto validate() const -> bool override;
 
     auto transform_d(std::function<void(TH1* h)> transform_function) -> void
     {
@@ -398,8 +413,8 @@ public:
 
     virtual void applyBinomErrors(TH1* N) override;
 
-    bool write(TFile* f /* = nullptr*/, bool verbose = false) override;
-    bool write(const char* filename /* = nullptr*/, bool verbose = false) override;
+    auto save(TFile* f /* = nullptr*/, bool verbose = false) -> bool override;
+    auto save(const char* filename /* = nullptr*/, bool verbose = false) -> bool override;
 
     void fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, hf::fit_entry& stdfit, bool integral_only = false);
     bool fit_cell_hist(TH1* hist, hf::fit_entry* hfp, double min_entries = 0);
@@ -408,23 +423,22 @@ public:
     virtual void prepare_cells_canvas();
 
 protected:
-    virtual void rename(const char* newname);
-    virtual void chdir(const char* newdir);
+    virtual void rename(const char* newname) override;
+    virtual void chdir(const char* newdir) override;
 
 private:
     virtual void init_cells();
 
-public:
+private:
     context ctx;
     std::unique_ptr<observable> cells;
-    TCanvas** c_cells;      //!
     TObjArray* objectsFits; //!
-
-private:
     FitCallback* fitCallback;
 
     // ClassDef(DifferentialFactory, 1);
 };
+
+template <typename Ctx> void load_from_file() {}
 
 template <class T> auto scale(T* fac, Float_t factor) -> void
 {

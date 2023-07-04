@@ -22,6 +22,8 @@
 
 #include <hellofitty.hpp>
 
+#include <fmt/core.h>
+
 #include <TCanvas.h>
 #include <TF1.h>
 #include <TFile.h>
@@ -37,11 +39,9 @@ const Option_t h1opts[] = "h,E1";
 const TString flags_fit_a = "B,Q,0";
 const TString flags_fit_b = "";
 
-distribution::distribution() : basic_distribution(), ctx(context()), cells(nullptr) {}
+// distribution::distribution() : basic_distribution(), ctx(context()), cells(nullptr) {}
 
 distribution::distribution(const context& context) : basic_distribution(context), ctx(context), cells(nullptr) {}
-
-distribution::distribution(const context* context) : basic_distribution(context), ctx(*context), cells(nullptr) {}
 
 distribution::~distribution()
 {
@@ -64,37 +64,37 @@ DifferentialFactory& DifferentialFactory::operator=(const DifferentialFactory& f
     return *this;
 }*/
 
-void distribution::prepare()
+auto distribution::prepare() -> void
 {
     ctx.prepare();
     basic_distribution::prepare();
     RegObject(&ctx);
     objectsFits = new TObjArray();
-    objectsFits->SetName(ctx.name + "Fits");
+    objectsFits->SetName(ctx.name + "_fits");
 
     init_cells();
 }
 
-void distribution::init_cells()
+auto distribution::init_cells() -> void
 {
     cells = std::unique_ptr<observable>(
-        new observable(ctx.dim, ctx.name.Data(), hSignalCounter.get(), ctx.v, "@@@d/cells/%c_@@@a", this));
+        new observable(ctx.dim, ctx.name.Data(), get_signal_hist(), ctx.v, "@@@d/cells/%c_@@@a", this));
 }
 
-void distribution::reinit()
+auto distribution::reinit() -> void
 {
-    basic_distribution::ctx = static_cast<basic_context>(ctx);
+    // basic_distribution::ctx = static_cast<basic_context>(ctx);
     basic_distribution::reinit();
 
-    if (cells)
-    {
-        cells->prefix_name = ctx.hist_name;
-        cells->rename(ctx.hist_name);
-        cells->chdir(ctx.dir_name);
-    }
+    // if (cells)
+    // {
+    //     cells->prefix_name = ctx.hist_name;
+    //     cells->rename(ctx.hist_name);
+    //     cells->chdir(ctx.dir_name);
+    // }
 }
 
-// void DifferentialFactory::getDiffs(bool with_canvases)
+// auto DifferentialFactory::getDiffs(bool with_canvases)-> void
 // {
 // 	Int_t can_width = 800, can_height = 600;
 // TString hname, htitle, cname;
@@ -161,41 +161,47 @@ auto distribution::transform_v(std::function<void(TH1* h)> transform_function) -
 {
     if (cells)
     {
-        for (int i = 0; i < cells->getNHists(); ++i)
+        for (int i = 0; i < cells->get_hists_number(); ++i)
         {
-            transform_function(dynamic_cast<TH1*>((*cells)[i]));
+            transform_function(dynamic_cast<TH1*>(cells->get_hist_by_index(i)));
         }
     }
 }
 
 auto distribution::transform_v(std::function<void(TCanvas* h)> transform_function) -> void
 {
-    if (cells) {}
+    if (cells)
+    {
+        fmt::print("N of canvases = {}\n", cells->get_canvas_number());
+        for (int i = 0; i < cells->get_canvas_number(); ++i)
+        {
+            transform_function(dynamic_cast<TCanvas*>(cells->get_canvas_by_index(i)));
+        }
+    }
 }
 
 // TODO move away
-void distribution::applyBinomErrors(TH1* N)
+auto distribution::applyBinomErrors(TH1* N) -> void
 {
     basic_distribution::applyBinomErrors(N);
     // FIXME do it for cells ?
 }
 
-bool distribution::write(const char* filename, bool verbose)
+auto distribution::save(const char* filename, bool verbose) -> bool
 {
     auto f = TFile::Open(filename, "RECREATE");
-    auto res = write(f, verbose);
+    auto res = save(f, verbose);
     f->Close();
     return res;
 }
 
-bool distribution::write(TFile* f, bool verbose)
+auto distribution::save(TFile* f, bool verbose) -> bool
 {
-    basic_distribution::write(f, verbose);
-    if (cells) cells->write(f, verbose);
+    exportStructure(f, verbose);
     return true;
 }
 
-void distribution::prepare_cells_canvas()
+auto distribution::prepare_cells_canvas() -> void
 {
     TLatex latex;
     latex.SetNDC();
@@ -206,15 +212,16 @@ void distribution::prepare_cells_canvas()
     nflatex.SetTextSize(0.07f);
     nflatex.SetTextAlign(23);
 
-    auto nhists = cells->getNHists();
+    auto nhists = cells->get_hists_number();
     for (int i = 0; i < nhists; ++i)
     {
         Int_t bx = 0, by = 0, bz = 0;
         cells->reverseBin(i, bx, by, bz);
 
-        TVirtualPad* pad = cells->getPad(bx, by, bz);
+        TVirtualPad* pad = cells->get_pad(bx, by, bz);
+        pad->Clear();
         pad->cd();
-        TH1* h = cells->get(bx, by, bz);
+        TH1* h = cells->get_hist(bx, by, bz);
         h->Draw();
         int pad_number = 0;
         if (ctx.dim == dimension::DIM1)
@@ -307,8 +314,8 @@ void distribution::prepare_cells_canvas()
     }
 }
 
-void distribution::fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, hf::fit_entry& stdfit,
-                                   bool integral_only)
+auto distribution::fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, hf::fit_entry& stdfit,
+                                   bool integral_only) -> void
 {
     // 	FitResultData res;
     bool res;
@@ -331,21 +338,21 @@ void distribution::fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, h
 
                 if (ctx.dim == dimension::DIM3)
                 {
-                    can = cells->getCanvas(bx, by);
+                    can = cells->get_canvas(bx, by);
                     can->cd(bz + 1);
                 }
                 else if (ctx.dim == dimension::DIM2)
                 {
-                    can = cells->getCanvas(bx);
+                    can = cells->get_canvas(bx);
                     can->cd(by + 1);
                 }
                 else if (ctx.dim == dimension::DIM1)
                 {
-                    can = cells->getCanvas(0);
+                    can = cells->get_canvas(0);
                     can->cd(bx + 1);
                 }
 
-                TH1D* hfit = cells->get(bx, by, bz);
+                TH1D* hfit = cells->get_hist(bx, by, bz);
                 hfit->SetStats(0);
                 hfit->Draw();
                 info_text = 0;
@@ -470,8 +477,8 @@ void distribution::fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, h
 
     // RT::NicePalette(dynamic_cast<TH2*>(sigfac->hSignalCounter.get()), 0.05f); FIXME
 
-    printf("Raw/fine binning counts:  %f / %f  for %s\n", sigfac->hSignalCounter->Integral(),
-           sigfac->hSignalCounter->Integral(), ctx.hist_name.Data());
+    printf("Raw/fine binning counts:  %f / %f  for %s\n", sigfac->get_signal_hist()->Integral(),
+           sigfac->get_signal_hist()->Integral(), ctx.hist_name.Data());
 }
 
 bool distribution::fit_cell_hist(TH1* hist, hf::fit_entry* hfp, double min_entries)
@@ -510,22 +517,35 @@ bool distribution::fit_cell_hist(TH1* hist, hf::fit_entry* hfp, double min_entri
     return true;
 }
 
-void distribution::rename(const char* newname)
+auto distribution::rename(const char* newname) -> void
 {
     basic_distribution::rename(newname);
-    if (cells) cells->rename(newname);
+    // if (cells) cells->rename(newname);
 }
 
-void distribution::chdir(const char* newdir)
+auto distribution::chdir(const char* newdir) -> void
 {
     basic_distribution::chdir(newdir);
-    if (cells) cells->chdir(newdir);
+    // if (cells) cells->chdir(newdir);
 }
 
-void distribution::reset()
+auto distribution::reset() -> void
 {
     basic_distribution::reset();
-    if (cells) cells->reset();
+    // if (cells) cells->reset();
+}
+
+auto distribution::print() const -> void
+{
+    basic_distribution::print();
+    if (cells) cells->print();
+}
+
+auto distribution::validate() const -> bool
+{
+    if (!basic_distribution::validate()) return false;
+    if (!ctx.v.get_var()) throw std::runtime_error("The x-axis variable is not set");
+    return true;
 }
 
 } // namespace midas
