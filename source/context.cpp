@@ -198,7 +198,8 @@ auto context::operator==(const context& ctx) -> bool
 
 auto context::operator!=(const context& ctx) -> bool { return !operator==(ctx); }
 
-auto context::cast(TString new_name, dimension new_dim) const -> context {
+auto context::cast(TString new_name, dimension new_dim) const -> context
+{
     context new_ctx = *this;
     new_ctx.name = new_name;
     new_ctx.dim = new_dim;

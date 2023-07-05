@@ -27,7 +27,8 @@ int main()
     ctx.prepare();
     ctx.print();
 
-    midas::distribution fac(ctx);
+    pandora::pandora box("test");
+    midas::distribution fac(ctx, &box);
     fac.prepare();
     fac.print();
 
@@ -58,6 +59,6 @@ int main()
 
     fac.transform([](TCanvas* c) { c->Print(".png"); });
 
-    fac.listRegisteredObjects();
-    fac.exportStructure("output.root");
+    box.list_registered_objects();
+    box.export_structure("output.root");
 }

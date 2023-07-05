@@ -22,7 +22,7 @@ else()
   set(GTEST_TRG gtest gtest_main)
 endif()
 
-target_link_libraries(gtests PRIVATE Midas::Midas RT::Pandora ${GTEST_TRG} ${FMT_TARGET})
+target_link_libraries(gtests PRIVATE Midas::Midas pandora::pandora ${GTEST_TRG} ${FMT_TARGET})
 if(ENABLE_ADVANCE_TOOLS)
   target_code_coverage(gtests ALL)
 endif()

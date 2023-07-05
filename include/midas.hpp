@@ -21,8 +21,9 @@
 
 #include "Midas/midas_export.hpp"
 
-#include <Pandora.h>
+#include <pandora.hpp>
 
+#include <TCanvas.h>
 #include <TF1.h>
 #include <TH1.h>
 #include <TNamed.h>
@@ -31,10 +32,10 @@
 #include <functional>
 #include <stdexcept>
 
-class TCanvas;
 class TH2;
 class TH2D;
 class TVirtualPad;
+class TFile;
 
 namespace hf
 {
@@ -305,13 +306,13 @@ private:
     ClassDefOverride(context, 1)
 };
 
-class MIDAS_EXPORT basic_distribution : public TObject, public RT::Pandora
+class MIDAS_EXPORT basic_distribution : public TObject
 {
 protected:
     // basic_distribution();
 
 public:
-    basic_distribution(const basic_context& ctx);
+    basic_distribution(const basic_context& ctx, pandora::pandora* pbox = nullptr);
     basic_distribution(const basic_distribution&) = delete;
     basic_distribution(basic_distribution&&) = default;
     virtual ~basic_distribution();
@@ -342,12 +343,36 @@ public:
     virtual auto save(TFile* f /* = nullptr*/, bool verbose = false) -> bool;
     virtual auto save(const char* filename /* = nullptr*/, bool verbose = false) -> bool;
 
+    template <typename T, typename... Types> T* RegHist(const char* name, const char* title, Types... arguments)
+    {
+        if (box)
+            return box->RegHist<T>(name, title, arguments...);
+        else
+        {
+            auto h = new T(name, title, arguments...);
+            garbage.push_back(h);
+            return h;
+        }
+    }
+
+    TCanvas* RegCanvas(const char* name, const char* title, int width, int height)
+    {
+        if (box)
+            return box->RegCanvas(name, title, width, height);
+        else
+        {
+            auto c = new TCanvas(name, title, width, height);
+            garbage.push_back(c);
+            return c;
+        }
+    }
+
 protected:
-    virtual auto rename(const char* newname) -> void;
-    virtual auto chdir(const char* newdir) -> void;
+    pandora::pandora* box{nullptr};
 
 private:
     basic_context ctx; //||
+    std::vector<TObject*> garbage;
 
     // #ifdef HAVE_HISTASYMMERRORS
     // 	TH2DA * hSignalCounter;
@@ -363,8 +388,9 @@ protected:
     // ClassDef(DistributionFactory, 1);
 };
 
-typedef void(FitCallback)(distribution* fac, basic_distribution* sigfac, int fit_res, TH1* h, int x_pos, int y_pos,
-                          int z_pos);
+/// Fit callback
+using FitCallback = std::function<void(distribution* fac, basic_distribution* sigfac, int fit_res, TH1* h, int x_pos,
+                                       int y_pos, int z_pos)>;
 
 class MIDAS_EXPORT distribution : public basic_distribution
 {
@@ -372,7 +398,7 @@ protected:
     // distribution();
 
 public:
-    distribution(const context& ctx);
+    distribution(const context& ctx, pandora::pandora* pbox = nullptr);
     distribution(const distribution&) = delete;
     distribution(distribution&&) = delete;
     virtual ~distribution();
@@ -387,7 +413,7 @@ public:
     virtual auto prepare() -> void override;
     virtual auto reinit() -> void override;
     virtual auto finalize(const char* draw_opts = nullptr) -> void override;
-    virtual auto reset() -> void override;
+    // virtual auto reset() -> void override; FIXME
 
     virtual auto print() const -> void override;
     virtual auto validate() const -> bool override;
@@ -422,18 +448,14 @@ public:
     void fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, hf::fit_entry& stdfit, bool integral_only = false);
     bool fit_cell_hist(TH1* hist, hf::fit_entry* hfp, double min_entries = 0);
 
-    void set_fit_callback(FitCallback* cb) { fitCallback = cb; }
+    void set_fit_callback(FitCallback cb) { fit_callback = std::move(cb); }
     virtual void prepare_cells_canvas();
-
-protected:
-    virtual void rename(const char* newname) override;
-    virtual void chdir(const char* newdir) override;
 
 private:
     context ctx;
     std::unique_ptr<observable> cells;
-    TObjArray* objectsFits; //!
-    FitCallback* fitCallback;
+    TObjArray* objects_fits; //!
+    FitCallback fit_callback;
 
     // ClassDef(DifferentialFactory, 1);
 };

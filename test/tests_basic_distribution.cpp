@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "midas.hpp"
+#include <midas.hpp>
 
 #include <TCanvas.h>
 #include <TFile.h>
@@ -11,7 +11,10 @@ class TestsBasicDistribution : public ::testing::Test
 protected:
     void SetUp() override
     {
-        // q0_ remains empty
+        box1 = std::unique_ptr<pandora::pandora>(new pandora::pandora("box1"));
+        box2 = std::unique_ptr<pandora::pandora>(new pandora::pandora("box2"));
+        box3 = std::unique_ptr<pandora::pandora>(new pandora::pandora("box3"));
+
         ctx_3d = std::unique_ptr<midas::basic_context>(new midas::basic_context("ctx_d3", midas::dimension::DIM3));
         ctx_3d->get_x().set_bins(4, -10, 10).set_label("a3_x").set_unit("cm").set_variable(&dummy_var);
         ctx_3d->get_y().set_bins(3, -10, 10).set_label("a3_y").set_unit("mm").set_variable(&dummy_var);
@@ -22,9 +25,9 @@ protected:
         ctx_1d = std::unique_ptr<midas::basic_context>(
             new midas::basic_context(ctx_2d->cast("ctx_1d", midas::dimension::DIM1)));
 
-        fac_1d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(*ctx_1d.get()));
-        fac_2d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(*ctx_2d.get()));
-        fac_3d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(*ctx_3d.get()));
+        fac_1d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(*ctx_1d.get(), box1.get()));
+        fac_2d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(*ctx_2d.get(), box2.get()));
+        fac_3d = std::unique_ptr<midas::basic_distribution>(new midas::basic_distribution(*ctx_3d.get(), box3.get()));
 
         fac_1d->prepare();
         fac_2d->prepare();
@@ -32,6 +35,10 @@ protected:
     }
 
     // void TearDown() override {}
+
+    std::unique_ptr<pandora::pandora> box1;
+    std::unique_ptr<pandora::pandora> box2;
+    std::unique_ptr<pandora::pandora> box3;
 
     std::unique_ptr<midas::basic_context> ctx_1d;
     std::unique_ptr<midas::basic_context> ctx_2d;

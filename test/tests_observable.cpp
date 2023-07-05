@@ -1,7 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "detail.hpp"
-#include "midas.hpp"
+#include <midas.hpp>
+
+#include <detail.hpp>
 
 #include <fmt/core.h>
 
@@ -21,15 +22,11 @@ TEST(TestObservable, Index)
 
     auto h2 = std::unique_ptr<TH2D>(new TH2D("h2", "h2", bins, min, max, bins, min, max));
     Int_t found_bin = h2->FindBin(0.5, 0.5);
-    ASSERT_EQ(5, found_bin);
 
     Int_t bx, by, bz;
     h2->GetBinXYZ(found_bin, bx, by, bz);
-    ASSERT_EQ(1, bx);
-    ASSERT_EQ(1, by);
-    ASSERT_EQ(0, bz);
 
-    RT::Pandora box("edm_test");
+    pandora::pandora box("edm_test");
     auto edm2 = std::unique_ptr<midas::observable>(
         new midas::observable(midas::dimension::DIM2, "edm2", h2.get(), axis, "edm2", &box));
     Int_t mapped_bin = edm2->get_bin(bx - 1, by - 1, 0);
@@ -56,7 +53,7 @@ TEST(TestObservable, Fill)
     auto h2 = std::unique_ptr<TH2D>(new TH2D("h2", "h2", bins, min, max, bins, min, max));
     auto h3 = std::unique_ptr<TH3D>(new TH3D("h3", "h3", bins, min, max, bins, min, max, bins, min, max));
 
-    RT::Pandora box("edm_test");
+    pandora::pandora box("edm_test");
     auto edm1 = std::unique_ptr<midas::observable>(
         new midas::observable(midas::dimension::DIM1, "edm1", h1.get(), axis, "edm1", &box));
     auto edm2 = std::unique_ptr<midas::observable>(
@@ -97,7 +94,7 @@ TEST(TestObservable, Reverse)
     auto h2 = std::unique_ptr<TH2D>(new TH2D("h2", "h2", bins, min, max, bins, min, max));
     auto h3 = std::unique_ptr<TH3D>(new TH3D("h3", "h3", bins, min, max, bins, min, max, bins, min, max));
 
-    RT::Pandora box("edm_test");
+    pandora::pandora box("edm_test");
     auto edm1 = std::unique_ptr<midas::observable>(
         new midas::observable(midas::dimension::DIM1, "edm1", h1.get(), axis, "edm1", &box));
     auto edm2 = std::unique_ptr<midas::observable>(

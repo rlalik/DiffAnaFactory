@@ -1,13 +1,13 @@
-#include <cstdlib>
+#include <midas.hpp>
 
 #undef NDEBUG
 #include <assert.h>
 
-#include <Pandora.h>
-
 #include <TCanvas.h>
 #include <TFile.h>
 #include <TH2.h>
+
+#include <cstdlib>
 
 const int bar_limit = 50;
 const char hist_pattern[] = "hist_%06d";
@@ -23,7 +23,7 @@ void write_func()
 {
     // create factory
 
-    RT::Pandora* fac = new RT::Pandora("factory1");
+    pandora::pandora* fac = new pandora::pandora("factory1");
 
     // fill with histograms
     char hname[100];
@@ -43,24 +43,24 @@ void write_func()
         bar(i);
     }
 
-    fac->rename("renamed_factory");
-    fac->chdir("renamed_directory");
+    // fac->rename("renamed_factory");
+    // fac->chdir("renamed_directory");
 
     // list objects
     // 	fac->listRegisterdObjects();
 
     // export factory to file
-    fac->exportStructure("example_multi.root", true);
+    fac->export_structure("example_multi.root", true);
 }
 
 void loop_read_func()
 {
     // create factory
-    RT::Pandora* fac = new RT::Pandora("factory1");
+    pandora::pandora* fac = new pandora::pandora("factory1");
 
     // import from file and register in the factory
     // data will be stored in memory, file remains open
-    TFile* f = fac->importStructure("example_multi.root");
+    TFile* f = fac->import_structure("example_multi.root");
 
     // list of registered objects
     // 	fac->listRegisterdObjects();
@@ -70,7 +70,7 @@ void loop_read_func()
     for (int i = 0; i < 100; ++i)
     {
         sprintf(hname, hist_pattern, i);
-        TH2F* h1 = dynamic_cast<TH2F*>(fac->getObject(hname));
+        TH2F* h1 = dynamic_cast<TH2F*>(fac->get_object(hname));
         // if failed, then objects are not read from file
         assert(h1 != nullptr);
 

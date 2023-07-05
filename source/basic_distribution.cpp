@@ -36,24 +36,33 @@ namespace midas
 {
 
 // basic_distribution::basic_distribution()
-//     : RT::Pandora(""), ctx(basic_context("", dimension::NODIM)), signal_histogram(nullptr), signal_canvas(nullptr),
+//     : pandora::pandora(""), ctx(basic_context("", dimension::NODIM)), signal_histogram(nullptr),
+//     signal_canvas(nullptr),
 //       drawOpts("colz")
 // {
 // }
 
-basic_distribution::basic_distribution(const basic_context& context)
-    : RT::Pandora(context.get_name()), ctx(context), signal_histogram(nullptr), signal_canvas(nullptr), drawOpts("colz")
+basic_distribution::basic_distribution(const basic_context& context, pandora::pandora* pbox)
+    : box(pbox), ctx(context), signal_histogram(nullptr), signal_canvas(nullptr), drawOpts("colz")
 {
+    if (box)
+    {
+        box->add_placeholder("{dir}", ctx.name.Data());
+        box->add_placeholder("{analysis}", ctx.name.Data());
+    }
 }
 
-basic_distribution::~basic_distribution() { gSystem->ProcessEvents(); }
+basic_distribution::~basic_distribution()
+{
+    gSystem->ProcessEvents();
+    for (auto& o : garbage)
+        delete o;
+}
 
 void basic_distribution::prepare()
 {
     // RegObject(&ctx);
     ctx.prepare();
-    rename(ctx.hist_name.Data());
-    chdir(ctx.dir_name.Data());
 
     TString htitle = ctx.format_hist_axes();
     TString htitlez = ctx.z.format_string();
@@ -71,12 +80,12 @@ void basic_distribution::prepare()
         switch (bins_mask)
         {
             case 0x01:
-                signal_histogram = std::unique_ptr<TH1>(
-                    RegHist<TH1D>("@@@d/h_@@@a", htitle.Data(), ctx.x.get_bins(), ctx.x.get_min(), ctx.x.get_max()));
+                signal_histogram = std::unique_ptr<TH1>(RegHist<TH1D>(
+                    "{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_min(), ctx.x.get_max()));
                 break;
             case 0x02:
                 signal_histogram = std::unique_ptr<TH1>(
-                    RegHist<TH1D>("@@@d/h_@@@a", htitle.Data(), ctx.x.get_bins(), ctx.x.get_bins_array()));
+                    RegHist<TH1D>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_bins_array()));
                 break;
         }
         signal_histogram->SetTitle(ctx.context_title);
@@ -99,23 +108,23 @@ void basic_distribution::prepare()
             {
                 case 0x11:
                     signal_histogram = std::unique_ptr<TH1>(
-                        RegHist<TH2D_TYPE>("@@@d/h_@@@a", htitle.Data(), ctx.x.get_bins(), ctx.x.get_min(),
+                        RegHist<TH2D_TYPE>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_min(),
                                            ctx.x.get_max(), ctx.y.get_bins(), ctx.y.get_min(), ctx.y.get_max()));
                     break;
                 case 0x12:
                     signal_histogram = std::unique_ptr<TH1>(
-                        RegHist<TH2D_TYPE>("@@@d/h_@@@a", htitle.Data(), ctx.x.get_bins(), ctx.x.get_bins_array(),
-                                           ctx.y.get_bins(), ctx.y.get_min(), ctx.y.get_max()));
+                        RegHist<TH2D_TYPE>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(),
+                                           ctx.x.get_bins_array(), ctx.y.get_bins(), ctx.y.get_min(), ctx.y.get_max()));
                     break;
                 case 0x21:
                     signal_histogram = std::unique_ptr<TH1>(
-                        RegHist<TH2D_TYPE>("@@@d/h_@@@a", htitle.Data(), ctx.x.get_bins(), ctx.x.get_min(),
+                        RegHist<TH2D_TYPE>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_min(),
                                            ctx.x.get_max(), ctx.y.get_bins(), ctx.y.get_bins_array()));
                     break;
                 case 0x22:
                     signal_histogram = std::unique_ptr<TH1>(
-                        RegHist<TH2D_TYPE>("@@@d/h_@@@a", htitle.Data(), ctx.x.get_bins(), ctx.x.get_bins_array(),
-                                           ctx.y.get_bins(), ctx.y.get_bins_array()));
+                        RegHist<TH2D_TYPE>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(),
+                                           ctx.x.get_bins_array(), ctx.y.get_bins(), ctx.y.get_bins_array()));
                     break;
             }
             signal_histogram->SetTitle(ctx.context_title);
@@ -133,14 +142,14 @@ void basic_distribution::prepare()
                 {
                     case 0x111:
                         signal_histogram = std::unique_ptr<TH1>(
-                            RegHist<TH3D>("@@@d/h_@@@a", htitle.Data(), ctx.x.get_bins(), ctx.x.get_min(),
+                            RegHist<TH3D>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_min(),
                                           ctx.x.get_max(), ctx.y.get_bins(), ctx.y.get_min(), ctx.y.get_max(),
                                           ctx.z.get_bins(), ctx.z.get_min(), ctx.z.get_max()));
                         break;
                     case 0x222:
                         signal_histogram = std::unique_ptr<TH1>(RegHist<TH3D>(
-                            "@@@d/h_@@@a", htitle.Data(), ctx.x.get_bins(), ctx.x.get_bins_array(), ctx.y.get_bins(),
-                            ctx.y.get_bins_array(), ctx.z.get_bins(), ctx.z.get_bins_array()));
+                            "{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_bins_array(),
+                            ctx.y.get_bins(), ctx.y.get_bins_array(), ctx.z.get_bins(), ctx.z.get_bins_array()));
                         break;
                     default:
                         throw std::runtime_error("TH3 must be all bins or all arrays. Mixed types provided.");
@@ -154,7 +163,7 @@ void basic_distribution::prepare()
 
     if (!signal_canvas)
     {
-        signal_canvas = std::unique_ptr<TCanvas>(RegCanvas("@@@d/c_@@@a", htitle, can_width, can_height));
+        signal_canvas = std::unique_ptr<TCanvas>(RegCanvas("{dir}/c_{analysis}", htitle, can_width, can_height));
 
         signal_canvas->SetTitle(ctx.context_title);
     }
@@ -171,9 +180,6 @@ void basic_distribution::reinit()
     signal_histogram->SetTitle(ctx.context_title);
 
     signal_canvas->SetTitle(ctx.context_title);
-
-    rename(ctx.dir_name);
-    rename(ctx.hist_name);
 }
 
 void basic_distribution::fill(Float_t weight)
@@ -266,10 +272,6 @@ void basic_distribution::applyBinomErrors(TH1* q, TH1* N)
 { /*RT::calcBinomialErrors(q, N);*/
 }
 
-void basic_distribution::rename(const char* newname) { Pandora::rename(newname); }
-
-void basic_distribution::chdir(const char* newdir) { Pandora::chdir(newdir); }
-
 auto basic_distribution::print() const -> void
 {
     fmt::print("Distribution info:\n");
@@ -304,8 +306,8 @@ auto basic_distribution::save(const char* filename, bool verbose) -> bool
 
 auto basic_distribution::save(TFile* f, bool verbose) -> bool
 {
-    return exportStructure(f, verbose);
-    return true;
+    if (box) return box->export_structure(f, verbose);
+    return false;
 }
 
 }; // namespace midas

@@ -30,6 +30,7 @@
 #include <TH1.h>
 #include <TLatex.h>
 #include <TList.h>
+#include <TSystem.h>
 
 namespace midas
 {
@@ -41,14 +42,15 @@ const TString flags_fit_b = "";
 
 // distribution::distribution() : basic_distribution(), ctx(context()), cells(nullptr) {}
 
-distribution::distribution(const context& context) : basic_distribution(context), ctx(context), cells(nullptr) {}
-
-distribution::~distribution()
+distribution::distribution(const context& context, pandora::pandora* pbox)
+    : basic_distribution(context, pbox), ctx(context), objects_fits(nullptr)
 {
-    // 	gSystem->ProcessEvents();
 }
 
-auto distribution::operator==(const distribution& fac) -> bool {
+distribution::~distribution() { gSystem->ProcessEvents(); }
+
+auto distribution::operator==(const distribution& fac) -> bool
+{
     if (ctx == fac.ctx) return true;
     return false;
 }
@@ -74,12 +76,12 @@ auto distribution::prepare() -> void
 {
     ctx.prepare();
     basic_distribution::prepare();
-    RegObject(&ctx);
-    objectsFits = new TObjArray();
-    objectsFits->SetName(ctx.name + "_fits");
-    
+    if (box) box->RegObject(&ctx);
+    objects_fits = new TObjArray();
+    objects_fits->SetName(ctx.name + "_fits");
+
     cells = std::unique_ptr<observable>(
-        new observable(ctx.dim, ctx.name.Data(), get_signal_hist(), ctx.v, "@@@d/cells/%c_@@@a", this)); // FIXME
+        new observable(ctx.dim, ctx.name.Data(), get_signal_hist(), ctx.v, "{dir}/cells/%c_{analysis}", box)); // FIXME
 }
 
 auto distribution::reinit() -> void
@@ -198,8 +200,8 @@ auto distribution::save(const char* filename, bool verbose) -> bool
 
 auto distribution::save(TFile* f, bool verbose) -> bool
 {
-    exportStructure(f, verbose);
-    return true;
+    if (box) return box->export_structure(f, verbose);
+    return false;
 }
 
 auto distribution::prepare_cells_canvas() -> void
@@ -277,7 +279,7 @@ auto distribution::prepare_cells_canvas() -> void
         auto oldalign = loop_latex.GetTextAlign();
         Short_t centeralign = 23;
 
-        auto centerpos = (1 - pad->GetRightMargin() + pad->GetLeftMargin()) / 2;
+        double centerpos = (1.0 - static_cast<double>(pad->GetRightMargin() + pad->GetLeftMargin())) / 2.0;
 
         loop_latex.SetTextAlign(centeralign);
         if (ctx.dim >= dimension::DIM1)
@@ -285,21 +287,21 @@ auto distribution::prepare_cells_canvas() -> void
             auto X_l = ctx.x.get_min() + ctx.x.get_delta() * static_cast<float>(bx);
             auto X_h = ctx.x.get_min() + ctx.x.get_delta() * static_cast<float>(1 + bx);
             loop_latex.DrawLatex(centerpos, 1.01,
-                                 TString::Format("%.2f < %s < %.2f", X_l, ctx.x.get_label().Data(), X_h));
+                                 fmt::format("{:.2f} < {:s} < {:.2f}", X_l, ctx.x.get_label().Data(), X_h).c_str());
         }
         if (ctx.dim >= dimension::DIM2)
         {
             auto Y_l = ctx.y.get_min() + ctx.y.get_delta() * static_cast<float>(by);
             auto Y_h = ctx.y.get_min() + ctx.y.get_delta() * static_cast<float>(1 + by);
             loop_latex.DrawLatex(centerpos, 0.96,
-                                 TString::Format("%.0f < %s < %.0f", Y_l, ctx.y.get_label().Data(), Y_h));
+                                 fmt::format("{:.2f} < {:s} < {:.2f}", Y_l, ctx.y.get_label().Data(), Y_h).c_str());
         }
         if (ctx.dim >= dimension::DIM3)
         {
             auto Z_l = ctx.y.get_min() + ctx.z.get_delta() * static_cast<float>(bz);
             auto Z_h = ctx.y.get_min() + ctx.z.get_delta() * static_cast<float>(1 + bz);
             loop_latex.DrawLatex(centerpos, 0.91,
-                                 TString::Format("%.0f < %s < %.0f", Z_l, ctx.z.get_label().Data(), Z_h));
+                                 fmt::format("{:.0f} < {:s} < {:.2f}", Z_l, ctx.z.get_label().Data(), Z_h).c_str());
         }
         loop_latex.SetTextAlign(oldalign);
         loop_latex.SetTextColor(/*36*/ 1);
@@ -327,9 +329,9 @@ auto distribution::fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, h
 
     int info_text = 0;
 
-    auto lx = cells->nbins_x;
-    auto ly = cells->nbins_y;
-    auto lz = cells->nbins_z;
+    auto lx = cells->get_bins_x();
+    auto ly = cells->get_bins_y();
+    auto lz = cells->get_bins_z();
 
     for (auto bx = 0; (bx < lx && lx > 0) || bx == 0; ++bx)
         for (auto by = 0; (by < ly && ly > 0) || by == 0; ++by)
@@ -396,7 +398,7 @@ auto distribution::fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, h
 
                             //                            if (res) hfp->update();
 
-                            if (fitCallback) (*fitCallback)(this, sigfac, res, hfit, bx, by, bz);
+                            if (fit_callback) fit_callback(this, sigfac, res, hfit, bx, by, bz);
 
                             // 						FIXME
                             // 						std::cout << "    Signal: " << res.signal << " +/- "
@@ -440,7 +442,7 @@ auto distribution::fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, h
                     // 				hDiscreteXYSig->SetBinContent(1+i, 1+j, res.signal);
                     // 				hDiscreteXYSig->SetBinError(1+i, 1+j, res.signal_err);
 
-                    if (fitCallback) (*fitCallback)(this, sigfac, -1, hfit, bx, by, bz);
+                    if (fit_callback) fit_callback(this, sigfac, -1, hfit, bx, by, bz);
                 }
 
                 Double_t hmax = hfit->GetBinContent(hfit->GetMaximumBin());
@@ -518,23 +520,11 @@ bool distribution::fit_cell_hist(TH1* hist, hf::fit_entry* hfp, double min_entri
     return true;
 }
 
-auto distribution::rename(const char* newname) -> void
-{
-    basic_distribution::rename(newname);
-    // if (cells) cells->rename(newname);
-}
-
-auto distribution::chdir(const char* newdir) -> void
-{
-    basic_distribution::chdir(newdir);
-    // if (cells) cells->chdir(newdir);
-}
-
-auto distribution::reset() -> void
-{
-    basic_distribution::reset();
-    // if (cells) cells->reset();
-}
+// auto distribution::reset() -> void FIXME
+// {
+//     if (box) box->basic_distribution::reset();
+//     // if (cells) cells->reset();
+// }
 
 auto distribution::print() const -> void
 {

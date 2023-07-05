@@ -35,7 +35,7 @@ include_directories(/usr/include/jsoncpp/)
 # set(jsoncpp_dep jsoncpp) else() set(jsoncpp_dep jsoncpp_lib) endif()
 
 find_package(RootTools REQUIRED)
-find_package(Pandora 0.9.3 REQUIRED)
+find_package(Pandora 0.9.4 REQUIRED)
 find_package(HelloFitty REQUIRED)
 
 # find_package(HistAsymmErrors QUIET)
@@ -60,7 +60,7 @@ add_library(
 )
 add_library(Midas::Midas ALIAS Midas)
 
-target_link_libraries(Midas PUBLIC ROOT::Core ROOT::Gpad RT::Pandora PRIVATE HelloFitty::HelloFitty $<BUILD_INTERFACE:jsoncpp>)
+target_link_libraries(Midas PUBLIC ROOT::Core ROOT::Gpad pandora::pandora PRIVATE HelloFitty::HelloFitty $<BUILD_INTERFACE:jsoncpp>)
 
 if (fmt_FETCHED)
   set(FMT_TARGET $<BUILD_INTERFACE:fmt::fmt-header-only>)

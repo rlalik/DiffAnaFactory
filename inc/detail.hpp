@@ -10,11 +10,25 @@
 namespace midas
 {
 
+namespace
+{
+/// Based on
+/// https://stackoverflow.com/questions/27490762/how-can-i-convert-to-size-t-from-int-safely
+constexpr auto size_t2int(size_t val) -> int
+{
+    return (val <= std::numeric_limits<int>::max()) ? static_cast<int>(val) : -1;
+}
+constexpr auto int2size_t(int val) -> size_t { return (val < 0) ? __SIZE_MAX__ : static_cast<size_t>(val); }
+
+constexpr auto f2d(float x) -> double { return static_cast<double>(x); }
+
+} // namespace
+
 class MIDAS_EXPORT observable : public TObject
 {
 public:
     observable(dimension dist_dim, const std::string& name, TH1* hist, const axis_config& v_axis,
-                         const std::string& dir_and_name, RT::Pandora* sf);
+               const std::string& dir_and_name, pandora::pandora* sf);
     virtual ~observable();
 
     auto get_bins_x() const -> Int_t { return nbins_x; }
@@ -32,19 +46,20 @@ public:
     TVirtualPad* get_pad(Int_t x, Int_t y = 0, Int_t z = 0);
 
     auto get_hists_number() const -> Int_t { return nhists; }
-    auto get_hist_by_index(int n) -> TH1D* { return histograms[n]; }
-    auto get_hist_by_index(int n) const -> const TH1D* { return histograms[n]; }
+    auto get_hist_by_index(int n) -> TH1D* { return histograms[int2size_t(n)]; }
+    auto get_hist_by_index(int n) const -> const TH1D* { return histograms[int2size_t(n)]; }
 
     auto get_canvas_number() const -> Int_t { return ncanvases; }
-    auto get_canvas_by_index(int n) -> TCanvas* { return canvases[n]; }
-    auto get_canvas_by_index(int n) const -> const TCanvas* { return canvases[n]; }
+    auto get_canvas_by_index(int n) -> TCanvas* { return canvases[int2size_t(n)]; }
+    auto get_canvas_by_index(int n) const -> const TCanvas* { return canvases[int2size_t(n)]; }
 
-    auto fill_1d(Float_t x, Float_t v, Float_t w = 1.0) -> void;
-    auto fill_2d(Float_t x, Float_t y, Float_t v, Float_t w = 1.0) -> void;
-    auto fill_3d(Float_t x, Float_t y, Float_t z, Float_t v, Float_t w = 1.0) -> void;
+    auto fill_1d(Double_t x, Double_t v, Double_t w = 1.0) -> void;
+    auto fill_2d(Double_t x, Double_t y, Double_t v, Double_t w = 1.0) -> void;
+    auto fill_3d(Double_t x, Double_t y, Double_t z, Double_t v, Double_t w = 1.0) -> void;
 
     auto print() const -> void;
     // ExtraDimensionMapper & operator=(const ExtraDimensionMapper & fa);
+
 private:
     auto map_1d(const axis_config& v_axis) -> void;
     auto map_2d(const axis_config& v_axis) -> void;
@@ -52,8 +67,30 @@ private:
     auto format_name(Int_t x, Int_t y = 0, Int_t z = 0) -> TString;
     auto format_canvas_name(Int_t x, Int_t y = 0) -> TString;
 
-public:
-    RT::Pandora * box;
+    template <typename T, typename... Types>
+    T* RegHist(const char* name, const char* title, Types... arguments) {
+        if (box)
+            return box->RegHist<T>(name, title, arguments...);
+        else {
+            auto h = new T(name, title, arguments...);
+            garbage.push_back(h);
+            return h;
+        }
+    }
+
+    TCanvas* RegCanvas(const char* name, const char* title, int width, int height) {
+        if (box)
+            return box->RegCanvas(name, title, width, height);
+        else {
+            auto c = new TCanvas(name, title, width, height);
+            garbage.push_back(c);
+            return c;
+        }
+    }
+
+private:
+    pandora::pandora* box;
+    std::vector<TObject*> garbage;
     dimension dim;
     axis_config axis; //||
     std::string prefix_name;
@@ -63,15 +100,10 @@ public:
     Int_t ncanvases;
 
     TH1* ref_hist;
-    TH1D** histograms;  //!
-    TCanvas** canvases; //!
-
-    // 	TObjArray * objectsFits;
+    std::vector<TH1D*> histograms;  //!
+    std::vector<TCanvas*> canvases; //!
 
     // ClassDef(ExtraDimensionMapper, 1);
-
-private:
-    // 	FitCallback * fitCallback;
 };
 
 namespace detail
@@ -81,7 +113,8 @@ auto dim_to_int(dimension dim) -> int;
 
 auto copyHistogram(TH1* src, TH1* dst, bool with_functions = true) -> bool;
 
-struct json_file_info {
+struct json_file_info
+{
     bool found;
     TString path;
 };

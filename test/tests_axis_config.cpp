@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "midas.hpp"
+#include <midas.hpp>
 
 TEST(TestsAxisConfig, CreationByValues)
 {
