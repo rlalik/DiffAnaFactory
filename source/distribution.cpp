@@ -47,6 +47,12 @@ distribution::~distribution()
 {
     // 	gSystem->ProcessEvents();
 }
+
+auto distribution::operator==(const distribution& fac) -> bool {
+    if (ctx == fac.ctx) return true;
+    return false;
+}
+
 /*
 DifferentialFactory& DifferentialFactory::operator=(const DifferentialFactory& fa)
 {
@@ -71,14 +77,9 @@ auto distribution::prepare() -> void
     RegObject(&ctx);
     objectsFits = new TObjArray();
     objectsFits->SetName(ctx.name + "_fits");
-
-    init_cells();
-}
-
-auto distribution::init_cells() -> void
-{
+    
     cells = std::unique_ptr<observable>(
-        new observable(ctx.dim, ctx.name.Data(), get_signal_hist(), ctx.v, "@@@d/cells/%c_@@@a", this));
+        new observable(ctx.dim, ctx.name.Data(), get_signal_hist(), ctx.v, "@@@d/cells/%c_@@@a", this)); // FIXME
 }
 
 auto distribution::reinit() -> void
@@ -144,11 +145,11 @@ auto distribution::fill(Float_t weight) -> void
 {
     basic_distribution::fill(weight);
     if (dimension::DIM3 == ctx.dim)
-        cells->Fill3D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.z.get_var(), *ctx.v.get_var(), weight);
+        cells->fill_3d(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.z.get_var(), *ctx.v.get_var(), weight);
     else if (dimension::DIM2 == ctx.dim)
-        cells->Fill2D(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.v.get_var(), weight);
+        cells->fill_2d(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.v.get_var(), weight);
     else if (dimension::DIM1 == ctx.dim)
-        cells->Fill1D(*ctx.x.get_var(), *ctx.v.get_var(), weight);
+        cells->fill_1d(*ctx.x.get_var(), *ctx.v.get_var(), weight);
 }
 
 auto distribution::finalize(const char* draw_opts) -> void
@@ -216,7 +217,7 @@ auto distribution::prepare_cells_canvas() -> void
     for (int i = 0; i < nhists; ++i)
     {
         Int_t bx = 0, by = 0, bz = 0;
-        cells->reverseBin(i, bx, by, bz);
+        cells->reverse_bin(i, bx, by, bz);
 
         TVirtualPad* pad = cells->get_pad(bx, by, bz);
         pad->Clear();

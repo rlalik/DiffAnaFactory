@@ -275,6 +275,7 @@ public:
     context(const context& ctx);
     virtual ~context();
 
+    auto cast(TString new_name, dimension new_dim) const -> context;
     auto expand(axis_config extra_dim) -> context = delete;
 
     auto get_v() -> axis_config& { return v; }
@@ -376,6 +377,8 @@ public:
     distribution(distribution&&) = delete;
     virtual ~distribution();
 
+    auto operator==(const distribution& fa) -> bool;
+
     auto operator=(const distribution& fa) -> distribution& = delete;
     auto operator=(distribution&& fa) -> distribution& = delete;
 
@@ -425,9 +428,6 @@ public:
 protected:
     virtual void rename(const char* newname) override;
     virtual void chdir(const char* newdir) override;
-
-private:
-    virtual void init_cells();
 
 private:
     context ctx;

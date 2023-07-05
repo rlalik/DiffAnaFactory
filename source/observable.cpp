@@ -50,17 +50,17 @@ observable::observable(dimension dist_dim, const std::string& ctx_name, TH1* his
     if (dimension::DIM1 == dim)
     {
         ncanvases = 1;
-        map1D(axis);
+        map_1d(axis);
     }
     else if (dimension::DIM2 == dim)
     {
         ncanvases = nbins_x;
-        map2D(axis);
+        map_2d(axis);
     }
     else if (dimension::DIM3 == dim)
     {
         ncanvases = nbins_x * nbins_y;
-        map3D(axis);
+        map_3d(axis);
     }
 }
 
@@ -77,9 +77,9 @@ observable::~observable()
     delete[] histograms;
 }
 
-auto observable::getBin(Int_t x, Int_t y, Int_t z) const -> Int_t { return z * (nbins_x * nbins_y) + y * nbins_x + x; }
+auto observable::get_bin(Int_t x, Int_t y, Int_t z) const -> Int_t { return z * (nbins_x * nbins_y) + y * nbins_x + x; }
 
-auto observable::reverseBin(Int_t bin, Int_t& x) const -> bool
+auto observable::reverse_bin(Int_t bin, Int_t& x) const -> bool
 {
     if (dim != dimension::DIM1) return false;
     if (bin < 0 or bin >= nhists) return false;
@@ -87,12 +87,12 @@ auto observable::reverseBin(Int_t bin, Int_t& x) const -> bool
     return true;
 }
 
-auto observable::reverseBin(Int_t bin, Int_t& x, Int_t& y) const -> bool
+auto observable::reverse_bin(Int_t bin, Int_t& x, Int_t& y) const -> bool
 {
     if (dim < dimension::DIM2)
     {
         y = 0;
-        return reverseBin(bin, x);
+        return reverse_bin(bin, x);
     }
     if (dim != dimension::DIM2) return false;
     if (bin < 0 or bin >= nhists) return false;
@@ -101,12 +101,12 @@ auto observable::reverseBin(Int_t bin, Int_t& x, Int_t& y) const -> bool
     return true;
 }
 
-auto observable::reverseBin(Int_t bin, Int_t& x, Int_t& y, Int_t& z) const -> bool
+auto observable::reverse_bin(Int_t bin, Int_t& x, Int_t& y, Int_t& z) const -> bool
 {
     if (dim < dimension::DIM3)
     {
         z = 0;
-        return reverseBin(bin, x, y);
+        return reverse_bin(bin, x, y);
     }
     if (dim != dimension::DIM3) return false;
     if (bin < 0 or bin >= nhists) return false;
@@ -116,30 +116,30 @@ auto observable::reverseBin(Int_t bin, Int_t& x, Int_t& y, Int_t& z) const -> bo
     return true;
 }
 
-auto observable::map1D(const axis_config& v_axis) -> void
+auto observable::map_1d(const axis_config& v_axis) -> void
 {
     for (Int_t i = 0; i < nbins_x; ++i)
     {
-        auto fname = formatName(i);
+        auto fname = format_name(i);
         if (v_axis.get_bins_array())
         {
-            histograms[getBin(i)] = box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
+            histograms[get_bin(i)] = box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
                                                        v_axis.get_bins(), v_axis.get_bins_array());
         }
         else
         {
-            histograms[getBin(i)] = box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
+            histograms[get_bin(i)] = box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
                                                        v_axis.get_bins(), v_axis.get_min(), v_axis.get_max());
         }
     }
 
-    auto fname = formatCanvasName(0);
+    auto fname = format_canvas_name(0);
     canvases = new TCanvas*[ncanvases];
     canvases[0] = box->RegCanvas(fname.Data(), fname.Data(), 800, 600);
     canvases[0]->DivideSquare(nbins_x);
 }
 
-auto observable::map2D(const axis_config& v_axis) -> void
+auto observable::map_2d(const axis_config& v_axis) -> void
 {
     canvases = new TCanvas*[ncanvases];
 
@@ -147,25 +147,25 @@ auto observable::map2D(const axis_config& v_axis) -> void
     {
         for (Int_t j = 0; j < nbins_y; ++j)
         {
-            auto fname = formatName(i, j);
+            auto fname = format_name(i, j);
             if (v_axis.get_bins_array())
             {
-                histograms[getBin(i, j)] = box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
+                histograms[get_bin(i, j)] = box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
                                                               v_axis.get_bins(), v_axis.get_bins_array());
             }
             else
             {
-                histograms[getBin(i, j)] = box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
+                histograms[get_bin(i, j)] = box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
                                                               v_axis.get_bins(), v_axis.get_min(), v_axis.get_max());
             }
         }
-        auto fname = formatCanvasName(i);
+        auto fname = format_canvas_name(i);
         canvases[i] = box->RegCanvas(fname.Data(), fname.Data(), 800, 600);
         canvases[i]->DivideSquare(nbins_y);
     }
 }
 
-auto observable::map3D(const axis_config& v_axis) -> void
+auto observable::map_3d(const axis_config& v_axis) -> void
 {
     canvases = new TCanvas*[ncanvases];
 
@@ -175,28 +175,28 @@ auto observable::map3D(const axis_config& v_axis) -> void
         {
             for (Int_t k = 0; k < nbins_z; ++k)
             {
-                auto fname = formatName(i, j, k);
+                auto fname = format_name(i, j, k);
                 if (v_axis.get_bins_array())
                 {
-                    histograms[getBin(i, j, k)] =
+                    histograms[get_bin(i, j, k)] =
                         box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()), v_axis.get_bins(),
                                            v_axis.get_bins_array());
                 }
                 else
                 {
-                    histograms[getBin(i, j, k)] =
+                    histograms[get_bin(i, j, k)] =
                         box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()), v_axis.get_bins(),
                                            v_axis.get_min(), v_axis.get_max());
                 }
             }
-            auto fname = formatCanvasName(i, j);
+            auto fname = format_canvas_name(i, j);
             canvases[i + j * nbins_x] = box->RegCanvas(fname.Data(), fname.Data(), 800, 600);
             canvases[i + j * nbins_x]->DivideSquare(nbins_z);
         }
     }
 }
 
-auto observable::formatName(Int_t x, Int_t y, Int_t z) -> TString
+auto observable::format_name(Int_t x, Int_t y, Int_t z) -> TString
 {
     char name[200];
     sprintf(name, prefix_name.c_str(), 'h');
@@ -211,7 +211,7 @@ auto observable::formatName(Int_t x, Int_t y, Int_t z) -> TString
         return "";
 }
 
-auto observable::formatCanvasName(Int_t x, Int_t y) -> TString
+auto observable::format_canvas_name(Int_t x, Int_t y) -> TString
 {
     char name[200];
     sprintf(name, prefix_name.c_str(), 'c');
@@ -246,7 +246,7 @@ auto observable::get_hist(Int_t x, Int_t y, Int_t z) -> TH1D*
 {
     if (x >= nbins_x or y >= nbins_y or z >= nbins_z) return nullptr;
 
-    return histograms[getBin(x, y, z)];
+    return histograms[get_bin(x, y, z)];
 }
 
 auto observable::get_canvas(Int_t x, Int_t y) -> TCanvas*
@@ -283,32 +283,32 @@ TH1D* observable::find_hist(Double_t x, Double_t y, Double_t z)
     auto bin = ref_hist->FindBin(x, y, z);
     Int_t bx, by, bz;
     ref_hist->GetBinXYZ(bin, bx, by, bz);
-    return histograms[getBin(bx - 1, by - 1, bz - 1)];
+    return histograms[get_bin(bx - 1, by - 1, bz - 1)];
 }
 
-auto observable::Fill1D(Float_t x, Float_t v, Float_t w) -> void
+auto observable::fill_1d(Float_t x, Float_t v, Float_t w) -> void
 {
     auto bin = ref_hist->FindBin(x);
     Int_t bx, by, bz;
     ref_hist->GetBinXYZ(bin, bx, by, bz);
-    if (bx > 0 && bx <= nbins_x) histograms[getBin(bx - 1)]->Fill(v, w);
+    if (bx > 0 && bx <= nbins_x) histograms[get_bin(bx - 1)]->Fill(v, w);
 }
 
-auto observable::Fill2D(Float_t x, Float_t y, Float_t v, Float_t w) -> void
+auto observable::fill_2d(Float_t x, Float_t y, Float_t v, Float_t w) -> void
 {
     auto bin = ref_hist->FindBin(x, y);
     Int_t bx, by, bz;
     ref_hist->GetBinXYZ(bin, bx, by, bz);
-    if (bx > 0 && bx <= nbins_x && by > 0 && by <= nbins_y) histograms[getBin(bx - 1, by - 1)]->Fill(v, w);
+    if (bx > 0 && bx <= nbins_x && by > 0 && by <= nbins_y) histograms[get_bin(bx - 1, by - 1)]->Fill(v, w);
 }
 
-auto observable::Fill3D(Float_t x, Float_t y, Float_t z, Float_t v, Float_t w) -> void
+auto observable::fill_3d(Float_t x, Float_t y, Float_t z, Float_t v, Float_t w) -> void
 {
     auto bin = ref_hist->FindBin(x, y, z);
     Int_t bx, by, bz;
     ref_hist->GetBinXYZ(bin, bx, by, bz);
     if (bx > 0 && bx <= nbins_x && by > 0 && by <= nbins_y && bz > 0 && bz <= nbins_z)
-        histograms[getBin(bx - 1, by - 1, bz - 1)]->Fill(v, w);
+        histograms[get_bin(bx - 1, by - 1, bz - 1)]->Fill(v, w);
 }
 
 auto observable::print() const -> void

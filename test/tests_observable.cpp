@@ -32,7 +32,7 @@ TEST(TestObservable, Index)
     RT::Pandora box("edm_test");
     auto edm2 = std::unique_ptr<midas::observable>(
         new midas::observable(midas::dimension::DIM2, "edm2", h2.get(), axis, "edm2", &box));
-    Int_t mapped_bin = edm2->getBin(bx - 1, by - 1, 0);
+    Int_t mapped_bin = edm2->get_bin(bx - 1, by - 1, 0);
     ASSERT_EQ(0, mapped_bin);
 }
 
@@ -107,28 +107,28 @@ TEST(TestObservable, Reverse)
 
     Int_t x, y, z;
 
-    ASSERT_FALSE(edm1->reverseBin(-1, x));
-    ASSERT_TRUE(edm1->reverseBin(0, x));
-    ASSERT_TRUE(edm1->reverseBin(1, x));
-    ASSERT_FALSE(edm1->reverseBin(2, x));
+    ASSERT_FALSE(edm1->reverse_bin(-1, x));
+    ASSERT_TRUE(edm1->reverse_bin(0, x));
+    ASSERT_TRUE(edm1->reverse_bin(1, x));
+    ASSERT_FALSE(edm1->reverse_bin(2, x));
 
     for (int i = 0; i < bins; ++i)
     {
-        auto bin_x = edm1->getBin(i);
-        ASSERT_TRUE(edm1->reverseBin(bin_x, x));
+        auto bin_x = edm1->get_bin(i);
+        ASSERT_TRUE(edm1->reverse_bin(bin_x, x));
         ASSERT_EQ(i, x);
 
         for (int j = 0; j < bins; ++j)
         {
-            auto bin_xy = edm2->getBin(i, j);
-            ASSERT_TRUE(edm2->reverseBin(bin_xy, x, y));
+            auto bin_xy = edm2->get_bin(i, j);
+            ASSERT_TRUE(edm2->reverse_bin(bin_xy, x, y));
             ASSERT_EQ(i, x);
             ASSERT_EQ(j, y);
 
             for (int k = 0; k < bins; ++k)
             {
-                auto bin_xyz = edm3->getBin(i, j, k);
-                ASSERT_TRUE(edm3->reverseBin(bin_xyz, x, y, z));
+                auto bin_xyz = edm3->get_bin(i, j, k);
+                ASSERT_TRUE(edm3->reverse_bin(bin_xyz, x, y, z));
                 ASSERT_EQ(i, x);
                 ASSERT_EQ(j, y);
                 ASSERT_EQ(k, z);

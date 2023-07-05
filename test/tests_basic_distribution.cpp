@@ -6,8 +6,6 @@
 #include <TFile.h>
 #include <TH1.h>
 
-#include <fmt/core.h>
-
 class TestsBasicDistribution : public ::testing::Test
 {
 protected:

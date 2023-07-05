@@ -7,6 +7,7 @@ set(tests_SRCS tests_axis_config.cpp
                tests_basic_context.cpp
                tests_context.cpp
                tests_basic_distribution.cpp
+               tests_distribution.cpp
                tests_observable.cpp)
 
 add_executable(gtests ${tests_SRCS})
