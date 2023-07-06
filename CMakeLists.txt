@@ -18,6 +18,7 @@ include(cmake/find_or_fetch_package.cmake)
 list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
 find_package(ROOT QUIET REQUIRED COMPONENTS Core Gpad Hist)
 
+set(FMT_INSTALL OFF)
 find_or_fetch_package(fmt https://github.com/fmtlib/fmt GIT_TAG 10.0.0 VERSION 10.0.0)
 
 # json parser
