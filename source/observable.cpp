@@ -121,19 +121,18 @@ auto observable::map_1d(const axis_config& v_axis) -> void
         auto fname = format_name(i);
         if (v_axis.get_bins_array())
         {
-            histograms[int2size_t(get_bin(i))] = box->RegHist<TH1D>(
-                fname.Data(), v_axis.format_hist_string(fname.Data()), v_axis.get_bins(), v_axis.get_bins_array());
+            histograms[int2size_t(get_bin(i))] = reg_hist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
+                                                                v_axis.get_bins(), v_axis.get_bins_array());
         }
         else
         {
-            histograms[int2size_t(get_bin(i))] =
-                box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()), v_axis.get_bins(),
-                                   v_axis.get_min(), v_axis.get_max());
+            histograms[int2size_t(get_bin(i))] = reg_hist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()),
+                                                                v_axis.get_bins(), v_axis.get_min(), v_axis.get_max());
         }
     }
 
     auto fname = format_canvas_name(0);
-    canvases[0] = box->RegCanvas(fname.Data(), fname.Data(), 800, 600);
+    canvases[0] = reg_canvas(fname.Data(), fname.Data(), 800, 600);
     canvases[0]->DivideSquare(nbins_x);
 }
 
@@ -146,19 +145,19 @@ auto observable::map_2d(const axis_config& v_axis) -> void
             auto fname = format_name(i, j);
             if (v_axis.get_bins_array())
             {
-                histograms[int2size_t(get_bin(i, j))] = box->RegHist<TH1D>(
+                histograms[int2size_t(get_bin(i, j))] = reg_hist<TH1D>(
                     fname.Data(), v_axis.format_hist_string(fname.Data()), v_axis.get_bins(), v_axis.get_bins_array());
             }
             else
             {
                 histograms[int2size_t(get_bin(i, j))] =
-                    box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()), v_axis.get_bins(),
-                                       v_axis.get_min(), v_axis.get_max());
+                    reg_hist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()), v_axis.get_bins(),
+                                   v_axis.get_min(), v_axis.get_max());
             }
         }
         auto fname = format_canvas_name(i);
-        canvases[i] = box->RegCanvas(fname.Data(), fname.Data(), 800, 600);
-        canvases[i]->DivideSquare(nbins_y);
+        canvases[int2size_t(i)] = reg_canvas(fname.Data(), fname.Data(), 800, 600);
+        canvases[int2size_t(i)]->DivideSquare(nbins_y);
     }
 }
 
@@ -174,18 +173,18 @@ auto observable::map_3d(const axis_config& v_axis) -> void
                 if (v_axis.get_bins_array())
                 {
                     histograms[int2size_t(get_bin(i, j, k))] =
-                        box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()), v_axis.get_bins(),
-                                           v_axis.get_bins_array());
+                        reg_hist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()), v_axis.get_bins(),
+                                       v_axis.get_bins_array());
                 }
                 else
                 {
                     histograms[int2size_t(get_bin(i, j, k))] =
-                        box->RegHist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()), v_axis.get_bins(),
-                                           v_axis.get_min(), v_axis.get_max());
+                        reg_hist<TH1D>(fname.Data(), v_axis.format_hist_string(fname.Data()), v_axis.get_bins(),
+                                       v_axis.get_min(), v_axis.get_max());
                 }
             }
             auto fname = format_canvas_name(i, j);
-            canvases[int2size_t(i + j * nbins_x)] = box->RegCanvas(fname.Data(), fname.Data(), 800, 600);
+            canvases[int2size_t(i + j * nbins_x)] = reg_canvas(fname.Data(), fname.Data(), 800, 600);
             canvases[int2size_t(i + j * nbins_x)]->DivideSquare(nbins_z);
         }
     }
@@ -212,7 +211,7 @@ auto observable::format_canvas_name(Int_t x, Int_t y) -> TString
     sprintf(name, prefix_name.c_str(), 'c');
 
     if (dimension::DIM1 == dim)
-        return TString::Format("%s", name);
+        return TString::Format("%s_X", name);
     else if (dimension::DIM2 == dim)
         return TString::Format("%s_X%02d", name, x);
     else if (dimension::DIM3 == dim)

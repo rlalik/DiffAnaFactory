@@ -21,65 +21,44 @@ void bar(int i)
 
 void write_func()
 {
-    // create factory
-
-    pandora::pandora* fac = new pandora::pandora("factory1");
+    pandora::pandora* box = new pandora::pandora("box1");
 
     // fill with histograms
     char hname[100];
     for (int i = 0; i < 100; ++i)
     {
         sprintf(hname, hist_pattern, i);
-        TH2F* h = fac->RegHist<TH2F>(hname, "Histogram - loop", 100, -5, 5, 100, -5, 5);
+        TH2F* h = box->reg_hist<TH2F>(hname, "Histogram - loop", 100, -5, 5, 100, -5, 5);
 
         for (int j = 0; j < 100 * 100; ++j)
             h->SetBinContent(j + 1, sqrt(j));
 
-        // 		sprintf(hname, can_pattern, i);
-        // 		TCanvas * c = fac->RegCanvas(hname, "Canvas - loop", 800, 600);
-        // 		c->cd(0);
-        // 		h->Draw("colz");
-
         bar(i);
     }
 
-    // fac->rename("renamed_factory");
-    // fac->chdir("renamed_directory");
-
-    // list objects
-    // 	fac->listRegisterdObjects();
-
-    // export factory to file
-    fac->export_structure("example_multi.root", true);
+    // export box to file
+    box->export_structure("example_multi.root", true);
 }
 
 void loop_read_func()
 {
-    // create factory
-    pandora::pandora* fac = new pandora::pandora("factory1");
+    pandora::pandora* box = new pandora::pandora("box1");
 
-    // import from file and register in the factory
+    // import from file and register in the boxtory
     // data will be stored in memory, file remains open
-    TFile* f = fac->import_structure("example_multi.root");
-
-    // list of registered objects
-    // 	fac->listRegisterdObjects();
+    TFile* f = box->import_structure("example_multi.root");
 
     // you can fetch specific object by its name
     char hname[100];
     for (int i = 0; i < 100; ++i)
     {
         sprintf(hname, hist_pattern, i);
-        TH2F* h1 = dynamic_cast<TH2F*>(fac->get_object(hname));
+        TH2F* h1 = dynamic_cast<TH2F*>(box->get_object(hname));
         // if failed, then objects are not read from file
         assert(h1 != nullptr);
-
-        // 		sprintf(hname, can_pattern, i);
-        // 		TCanvas * c1 = (TCanvas*)fac->getObject(hname);
-        // 		assert(c1 != nullptr);
     }
 
-    delete fac;
+    delete box;
 
     // file must be closed by user
     f->Close();

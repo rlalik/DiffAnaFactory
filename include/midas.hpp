@@ -343,10 +343,10 @@ public:
     virtual auto save(TFile* f /* = nullptr*/, bool verbose = false) -> bool;
     virtual auto save(const char* filename /* = nullptr*/, bool verbose = false) -> bool;
 
-    template <typename T, typename... Types> T* RegHist(const char* name, const char* title, Types... arguments)
+    template <typename T, typename... Types> T* reg_hist(const char* name, const char* title, Types... arguments)
     {
         if (box)
-            return box->RegHist<T>(name, title, arguments...);
+            return box->reg_hist<T>(name, title, arguments...);
         else
         {
             auto h = new T(name, title, arguments...);
@@ -355,10 +355,10 @@ public:
         }
     }
 
-    TCanvas* RegCanvas(const char* name, const char* title, int width, int height)
+    TCanvas* reg_canvas(const char* name, const char* title, int width, int height)
     {
         if (box)
-            return box->RegCanvas(name, title, width, height);
+            return box->reg_canvas(name, title, width, height);
         else
         {
             auto c = new TCanvas(name, title, width, height);

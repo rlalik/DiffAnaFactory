@@ -10,10 +10,9 @@
 
 int main()
 {
-    // create factory
     pandora::pandora box("pcm_costhcm");
 
-    // import from file and register in the factory
+    // import from file and register in the box
     // data will be stored in memory, file remains open
     auto f = box.import_structure("output.root");
 
@@ -26,11 +25,11 @@ int main()
     if (ctx)
     {
         ctx->print();
-        auto fac = midas::distribution(*ctx, &box);
+        auto dist = midas::distribution(*ctx, &box);
         box.import_structure(f, true);
-        fac.prepare();
-        fac.transform([](TH1* h) { h->Print(); });
-        fac.transform([](TCanvas* c) { c->Print(); });
+        dist.prepare();
+        dist.transform([](TH1* h) { h->Print(); });
+        dist.transform([](TCanvas* c) { c->Print(); });
     }
 
     // file must be closed by user

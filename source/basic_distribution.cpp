@@ -69,6 +69,10 @@ void basic_distribution::prepare()
 
     if (ctx.dim == dimension::NODIM) { throw dimension_error("Dimension not set"); }
 
+    Int_t can_width = 800, can_height = 600;
+    signal_canvas = std::unique_ptr<TCanvas>(reg_canvas("{dir}/c_{analysis}", htitle, can_width, can_height));
+    signal_canvas->SetTitle(ctx.context_title);
+
     int bins_mask = 0x00;
     if (ctx.x.get_bins_array())
         bins_mask |= (2 << 0);
@@ -80,92 +84,83 @@ void basic_distribution::prepare()
         switch (bins_mask)
         {
             case 0x01:
-                signal_histogram = std::unique_ptr<TH1>(RegHist<TH1D>(
+                signal_histogram = std::unique_ptr<TH1>(reg_hist<TH1D>(
                     "{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_min(), ctx.x.get_max()));
                 break;
             case 0x02:
                 signal_histogram = std::unique_ptr<TH1>(
-                    RegHist<TH1D>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_bins_array()));
+                    reg_hist<TH1D>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_bins_array()));
                 break;
         }
         signal_histogram->SetTitle(ctx.context_title);
+        return;
     }
-    else
-    {
+
 #ifdef HAVE_HISTASYMMERRORS
 #define TH2D_TYPE TH2DA
 #else
 #define TH2D_TYPE TH2D
 #endif
-        if (ctx.y.get_bins_array())
-            bins_mask |= (2 << 4);
-        else if (ctx.y.get_bins())
-            bins_mask |= (1 << 4);
+    if (ctx.y.get_bins_array())
+        bins_mask |= (2 << 4);
+    else if (ctx.y.get_bins())
+        bins_mask |= (1 << 4);
 
-        if (ctx.dim == dimension::DIM2)
-        {
-            switch (bins_mask)
-            {
-                case 0x11:
-                    signal_histogram = std::unique_ptr<TH1>(
-                        RegHist<TH2D_TYPE>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_min(),
-                                           ctx.x.get_max(), ctx.y.get_bins(), ctx.y.get_min(), ctx.y.get_max()));
-                    break;
-                case 0x12:
-                    signal_histogram = std::unique_ptr<TH1>(
-                        RegHist<TH2D_TYPE>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(),
-                                           ctx.x.get_bins_array(), ctx.y.get_bins(), ctx.y.get_min(), ctx.y.get_max()));
-                    break;
-                case 0x21:
-                    signal_histogram = std::unique_ptr<TH1>(
-                        RegHist<TH2D_TYPE>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_min(),
-                                           ctx.x.get_max(), ctx.y.get_bins(), ctx.y.get_bins_array()));
-                    break;
-                case 0x22:
-                    signal_histogram = std::unique_ptr<TH1>(
-                        RegHist<TH2D_TYPE>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(),
-                                           ctx.x.get_bins_array(), ctx.y.get_bins(), ctx.y.get_bins_array()));
-                    break;
-            }
-            signal_histogram->SetTitle(ctx.context_title);
-        }
-        else
-        {
-            if (ctx.z.get_bins_array())
-                bins_mask |= (2 << 8);
-            else if (ctx.z.get_bins())
-                bins_mask |= (1 << 8);
-
-            if (ctx.dim == dimension::DIM3)
-            {
-                switch (bins_mask)
-                {
-                    case 0x111:
-                        signal_histogram = std::unique_ptr<TH1>(
-                            RegHist<TH3D>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_min(),
-                                          ctx.x.get_max(), ctx.y.get_bins(), ctx.y.get_min(), ctx.y.get_max(),
-                                          ctx.z.get_bins(), ctx.z.get_min(), ctx.z.get_max()));
-                        break;
-                    case 0x222:
-                        signal_histogram = std::unique_ptr<TH1>(RegHist<TH3D>(
-                            "{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_bins_array(),
-                            ctx.y.get_bins(), ctx.y.get_bins_array(), ctx.z.get_bins(), ctx.z.get_bins_array()));
-                        break;
-                    default:
-                        throw std::runtime_error("TH3 must be all bins or all arrays. Mixed types provided.");
-                        break;
-                }
-                signal_histogram->SetTitle(ctx.context_title);
-            }
-        }
-    }
-    Int_t can_width = 800, can_height = 600;
-
-    if (!signal_canvas)
+    if (ctx.dim == dimension::DIM2)
     {
-        signal_canvas = std::unique_ptr<TCanvas>(RegCanvas("{dir}/c_{analysis}", htitle, can_width, can_height));
+        switch (bins_mask)
+        {
+            case 0x11:
+                signal_histogram = std::unique_ptr<TH1>(
+                    reg_hist<TH2D_TYPE>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_min(),
+                                        ctx.x.get_max(), ctx.y.get_bins(), ctx.y.get_min(), ctx.y.get_max()));
+                break;
+            case 0x12:
+                signal_histogram = std::unique_ptr<TH1>(
+                    reg_hist<TH2D_TYPE>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_bins_array(),
+                                        ctx.y.get_bins(), ctx.y.get_min(), ctx.y.get_max()));
+                break;
+            case 0x21:
+                signal_histogram = std::unique_ptr<TH1>(
+                    reg_hist<TH2D_TYPE>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_min(),
+                                        ctx.x.get_max(), ctx.y.get_bins(), ctx.y.get_bins_array()));
+                break;
+            case 0x22:
+                signal_histogram = std::unique_ptr<TH1>(reg_hist<TH2D_TYPE>("{dir}/h_{analysis}", htitle.Data(),
+                                                                            ctx.x.get_bins(), ctx.x.get_bins_array(),
+                                                                            ctx.y.get_bins(), ctx.y.get_bins_array()));
+                break;
+        }
+        signal_histogram->SetTitle(ctx.context_title);
+        return;
+    }
 
-        signal_canvas->SetTitle(ctx.context_title);
+    if (ctx.z.get_bins_array())
+        bins_mask |= (2 << 8);
+    else if (ctx.z.get_bins())
+        bins_mask |= (1 << 8);
+
+    if (ctx.dim == dimension::DIM3)
+    {
+        switch (bins_mask)
+        {
+            case 0x111:
+                signal_histogram = std::unique_ptr<TH1>(
+                    reg_hist<TH3D>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_min(),
+                                   ctx.x.get_max(), ctx.y.get_bins(), ctx.y.get_min(), ctx.y.get_max(),
+                                   ctx.z.get_bins(), ctx.z.get_min(), ctx.z.get_max()));
+                break;
+            case 0x222:
+                signal_histogram = std::unique_ptr<TH1>(
+                    reg_hist<TH3D>("{dir}/h_{analysis}", htitle.Data(), ctx.x.get_bins(), ctx.x.get_bins_array(),
+                                   ctx.y.get_bins(), ctx.y.get_bins_array(), ctx.z.get_bins(), ctx.z.get_bins_array()));
+                break;
+            default:
+                throw std::runtime_error("TH3 must be all bins or all arrays. Mixed types provided.");
+                break;
+        }
+        signal_histogram->SetTitle(ctx.context_title);
+        return;
     }
 }
 

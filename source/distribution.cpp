@@ -76,12 +76,12 @@ auto distribution::prepare() -> void
 {
     ctx.prepare();
     basic_distribution::prepare();
-    if (box) box->RegObject(&ctx);
+    if (box) box->reg_object(&ctx);
     objects_fits = new TObjArray();
     objects_fits->SetName(ctx.name + "_fits");
 
     cells = std::unique_ptr<observable>(
-        new observable(ctx.dim, ctx.name.Data(), get_signal_hist(), ctx.v, "{dir}/cells/%c_{analysis}", box)); // FIXME
+        new observable(ctx.dim, ctx.name.Data(), get_signal_hist(), ctx.v, "{dir}/cells/%c_{analysis}", box));
 }
 
 auto distribution::reinit() -> void

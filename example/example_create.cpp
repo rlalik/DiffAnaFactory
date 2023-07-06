@@ -28,23 +28,23 @@ int main()
     ctx.print();
 
     pandora::pandora box("test");
-    midas::distribution fac(ctx, &box);
-    fac.prepare();
-    fac.print();
+    midas::distribution dist(ctx, &box);
+    dist.prepare();
+    dist.print();
 
     for (int i = 0; i < 10000000; ++i)
     {
         m_lambda = f_lambda.GetRandom();
         theta_cm = f_dist_x.GetRandom();
         p_cm = f_dist_y.GetRandom();
-        fac.fill();
+        dist.fill();
     }
 
-    fac.finalize();
+    dist.finalize();
 
-    fac.transform([](TCanvas* c) { c->SetMargin(0.20f, 0.15f, 0.15f, 0.05f); });
+    dist.transform([](TCanvas* c) { c->SetMargin(0.20f, 0.15f, 0.15f, 0.05f); });
 
-    fac.transform(
+    dist.transform(
         [](TH1* h)
         {
             h->GetXaxis()->SetLabelSize(0.06f);
@@ -57,7 +57,7 @@ int main()
             h->Print();
         });
 
-    fac.transform([](TCanvas* c) { c->Print(".png"); });
+    dist.transform([](TCanvas* c) { c->Print(".png"); });
 
     box.list_registered_objects();
     box.export_structure("output.root");

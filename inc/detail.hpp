@@ -68,9 +68,9 @@ private:
     auto format_canvas_name(Int_t x, Int_t y = 0) -> TString;
 
     template <typename T, typename... Types>
-    T* RegHist(const char* name, const char* title, Types... arguments) {
+    T* reg_hist(const char* name, const char* title, Types... arguments) {
         if (box)
-            return box->RegHist<T>(name, title, arguments...);
+            return box->reg_hist<T>(name, title, arguments...);
         else {
             auto h = new T(name, title, arguments...);
             garbage.push_back(h);
@@ -78,9 +78,9 @@ private:
         }
     }
 
-    TCanvas* RegCanvas(const char* name, const char* title, int width, int height) {
+    TCanvas* reg_canvas(const char* name, const char* title, int width, int height) {
         if (box)
-            return box->RegCanvas(name, title, width, height);
+            return box->reg_canvas(name, title, width, height);
         else {
             auto c = new TCanvas(name, title, width, height);
             garbage.push_back(c);
