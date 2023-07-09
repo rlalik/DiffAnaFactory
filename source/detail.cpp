@@ -106,60 +106,60 @@ auto find_json_file(const char* initial_path, const char* filename, int search_d
     return json_file;
 }
 
-auto json_read_TString_key(const Json::Value& jsondata, const char* key, TString& target) -> bool
-{
-    if (jsondata.isMember(key))
-    {
-        target = jsondata[key].asCString();
-        fmt::print("    + {}: {}\n", key, target.Data());
-        return true;
-    }
-    return false;
-}
+// auto json_read_TString_key(const Json::Value& jsondata, const char* key, TString& target) -> bool
+// {
+//     if (jsondata.isMember(key))
+//     {
+//         target = jsondata[key].asCString();
+//         fmt::print("    + {}: {}\n", key, target.Data());
+//         return true;
+//     }
+//     return false;
+// }
 
-auto json_read_int_key(const Json::Value& jsondata, const char* key, int& target) -> bool
-{
-    if (jsondata.isMember(key))
-    {
-        target = jsondata[key].asInt();
-        fmt::print("    + {}: {}\n", key, target);
-        return true;
-    }
-    return false;
-}
+// auto json_read_int_key(const Json::Value& jsondata, const char* key, int& target) -> bool
+// {
+//     if (jsondata.isMember(key))
+//     {
+//         target = jsondata[key].asInt();
+//         fmt::print("    + {}: {}\n", key, target);
+//         return true;
+//     }
+//     return false;
+// }
 
-auto json_read_uint_key(const Json::Value& jsondata, const char* key, uint& target) -> bool
-{
-    if (jsondata.isMember(key))
-    {
-        target = jsondata[key].asUInt();
-        fmt::print("    + {}: {}\n", key, target);
-        return true;
-    }
-    return false;
-}
+// auto json_read_uint_key(const Json::Value& jsondata, const char* key, uint& target) -> bool
+// {
+//     if (jsondata.isMember(key))
+//     {
+//         target = jsondata[key].asUInt();
+//         fmt::print("    + {}: {}\n", key, target);
+//         return true;
+//     }
+//     return false;
+// }
 
-auto json_read_float_key(const Json::Value& jsondata, const char* key, float& target) -> bool
-{
-    if (jsondata.isMember(key))
-    {
-        target = jsondata[key].asFloat();
-        fmt::print("    + {}: {}\n", key, target);
-        return true;
-    }
-    return false;
-}
+// auto json_read_float_key(const Json::Value& jsondata, const char* key, float& target) -> bool
+// {
+//     if (jsondata.isMember(key))
+//     {
+//         target = jsondata[key].asFloat();
+//         fmt::print("    + {}: {}\n", key, target);
+//         return true;
+//     }
+//     return false;
+// }
 
-auto json_read_double_key(const Json::Value& jsondata, const char* key, double& target) -> bool
-{
-    if (jsondata.isMember(key))
-    {
-        target = jsondata[key].asDouble();
-        fmt::print("    + {}: {}\n", key, target);
-        return true;
-    }
-    return false;
-}
+// auto json_read_double_key(const Json::Value& jsondata, const char* key, double& target) -> bool
+// {
+//     if (jsondata.isMember(key))
+//     {
+//         target = jsondata[key].asDouble();
+//         fmt::print("    + {}: {}\n", key, target);
+//         return true;
+//     }
+//     return false;
+// }
 
 } // namespace detail
 } // namespace midas

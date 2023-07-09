@@ -65,16 +65,24 @@
       "name": "flags-linux",
       "hidden": true,
       "cacheVariables": {
-        "CMAKE_CXX_FLAGS": "-fstack-protector-strong -fcf-protection=full -fstack-clash-protection -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wcast-qual -Wformat=2 -Wundef -Wshadow -Wcast-align -Wunused -Wnull-dereference -Wdouble-promotion -Wimplicit-fallthrough -Wextra-semi -Woverloaded-virtual -Wnon-virtual-dtor -Wold-style-cast",
-        "CMAKE_EXE_LINKER_FLAGS": "-Wl,--allow-shlib-undefined,--as-needed,-z,noexecstack,-z,relro,-z,now",
-        "CMAKE_SHARED_LINKER_FLAGS": "-Wl,--allow-shlib-undefined,--as-needed,-z,noexecstack,-z,relro,-z,now"
+        "CMAKE_CXX_FLAGS": "$env{LINUX_CXX_FLAGS}",
+        "CMAKE_EXE_LINKER_FLAGS": "$env{LINUX_EXE_LINKER_FLAGS}",
+        "CMAKE_SHARED_LINKER_FLAGS": "$env{LINUX_SHARED_LINKER_FLAGS}"
+      },
+      "environment": {
+        "LINUX_CXX_FLAGS": "-fstack-protector-strong -fcf-protection=full -fstack-clash-protection -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wcast-qual -Wformat=2 -Wundef -Wshadow -Wcast-align -Wunused -Wnull-dereference -Wdouble-promotion -Wimplicit-fallthrough -Wextra-semi -Woverloaded-virtual -Wnon-virtual-dtor -Wold-style-cast",
+        "LINUX_EXE_LINKER_FLAGS": "-Wl,--allow-shlib-undefined,--as-needed,-z,noexecstack,-z,relro,-z,now",
+        "LINUX_SHARED_LINKER_FLAGS": "-Wl,--allow-shlib-undefined,--as-needed,-z,noexecstack,-z,relro,-z,now"
       }
     },
     {
       "name": "flags-darwin",
       "hidden": true,
       "cacheVariables": {
-        "CMAKE_CXX_FLAGS": "-fstack-protector-strong -fcf-protection=full -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wcast-qual -Wformat=2 -Wundef -Wshadow -Wcast-align -Wunused -Wnull-dereference -Wdouble-promotion -Wimplicit-fallthrough -Wextra-semi -Woverloaded-virtual -Wnon-virtual-dtor -Wold-style-cast"
+        "CMAKE_CXX_FLAGS": "$env{DARWIN_CXX_FLAGS}"
+      },
+      "environment": {
+        "DARWIN_CXX_FLAGS": "-fstack-protector-strong -fcf-protection=full -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wcast-qual -Wformat=2 -Wundef -Wshadow -Wcast-align -Wunused -Wnull-dereference -Wdouble-promotion -Wimplicit-fallthrough -Wextra-semi -Woverloaded-virtual -Wnon-virtual-dtor -Wold-style-cast"
       }
     },
     {
@@ -82,9 +90,14 @@
       "description": "Note that all the flags after /W4 are required for MSVC to conform to the language standard",
       "hidden": true,
       "cacheVariables": {
-        "CMAKE_CXX_FLAGS": "/sdl /analyze /analyze:external- /guard:cf /utf-8 /diagnostics:caret /w14165 /w44242 /w44254 /w44263 /w34265 /w34287 /w44296 /w44365 /w44388 /w44464 /w14545 /w14546 /w14547 /w14549 /w14555 /w34619 /w34640 /w24826 /w14905 /w14906 /w14928 /w45038 /W4 /permissive- /volatile:iso /Zc:inline /Zc:preprocessor /Zc:lambda /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew /EHsc",
-        "CMAKE_EXE_LINKER_FLAGS": "/machine:x64 /guard:cf",
-        "CMAKE_SHARED_LINKER_FLAGS": "/machine:x64 /guard:cf"
+        "CMAKE_CXX_FLAGS": "$env{WIN_SHARED_LINKER_FLAGS}",
+        "CMAKE_EXE_LINKER_FLAGS": "$env{WIN_EXE_LINKER_FLAGS}",
+        "CMAKE_SHARED_LINKER_FLAGS": "$env{WIN_SHARED_LINKER_FLAGS}"
+      },
+      "environment": {
+        "WIN_CXX_FLAGS": "/sdl /analyze /analyze:external- /guard:cf /utf-8 /diagnostics:caret /w14165 /w44242 /w44254 /w44263 /w34265 /w34287 /w44296 /w44365 /w44388 /w44464 /w14545 /w14546 /w14547 /w14549 /w14555 /w34619 /w34640 /w24826 /w14905 /w14906 /w14928 /w45038 /W4 /permissive- /volatile:iso /Zc:inline /Zc:preprocessor /Zc:lambda /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew /EHsc",
+        "WIN_EXE_LINKER_FLAGS": "/machine:x64 /guard:cf",
+        "WIN_SHARED_LINKER_FLAGS": "/machine:x64 /guard:cf"
       }
     },
     {
@@ -92,7 +105,7 @@
       "generator": "Unix Makefiles",
       "hidden": true,
       "cacheVariables": {
-        "CMAKE_CXX_FLAGS": "-Og -g -fstack-protector-strong -fcf-protection=full -fstack-clash-protection -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wcast-qual -Wformat=2 -Wundef -Wshadow -Wcast-align -Wunused -Wnull-dereference -Wdouble-promotion -Wimplicit-fallthrough -Wextra-semi -Woverloaded-virtual -Wnon-virtual-dtor -Wold-style-cast",
+        "CMAKE_CXX_FLAGS": "-Og -g $env{LINUX_CXX_FLAGS}",
         "CMAKE_BUILD_TYPE": "Debug"
       }
     },
@@ -102,7 +115,7 @@
       "hidden": true,
       "inherits": ["ci-std"],
       "cacheVariables": {
-        "CMAKE_CXX_FLAGS": "-D_FORTIFY_SOURCE=3  -O2 -fstack-protector-strong -fcf-protection=full -fstack-clash-protection -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wcast-qual -Wformat=2 -Wundef -Wshadow -Wcast-align -Wunused -Wnull-dereference -Wdouble-promotion -Wimplicit-fallthrough -Wextra-semi -Woverloaded-virtual -Wnon-virtual-dtor -Wold-style-cast",
+        "CMAKE_CXX_FLAGS": "-D_FORTIFY_SOURCE=3 -O2 $env{LINUX_CXX_FLAGS}",
         "CMAKE_BUILD_TYPE": "Release"
       }
     },

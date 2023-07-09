@@ -383,7 +383,7 @@ auto distribution::fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, h
                         {
                             // 						PR(( hDiscreteXYDiff[i][j]->GetEntries() /
                             // hDiscreteXYDiff[i][j]->GetRMS() ));
-                            //						pad->SetFillColor(40);		// FIXME I dont want colors
+                            //						pad->SetFillColor(40);		// FIXME I don't want colors
                             // in the putput
                             info_text = 1;
                         }

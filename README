@@ -2,7 +2,7 @@ A. Description
 ===========================================================
 
 This library allows to organize and manage Root objects like
-histograms and canvases in easy way. Alows for writing and
+histograms and canvases in easy way. Allows for writing and
 reading them from file with minimum amount of work (see examples).
 
 

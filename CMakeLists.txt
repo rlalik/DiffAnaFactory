@@ -5,7 +5,7 @@ include(cmake/prelude.cmake)
 project(
     Midas
     VERSION 0.3.0
-    DESCRIPTION "Midas - a Mutli Dimensional Analysis framework."
+    DESCRIPTION "Midas - a Multi Dimensional Analysis framework."
     HOMEPAGE_URL "https://github.com/rlalik/Midas"
     LANGUAGES CXX
 )
@@ -15,24 +15,27 @@ include(cmake/variables.cmake)
 include(cmake/find_or_fetch_package.cmake)
 
 # find ROOT
-list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
+if (DEFINED ENV{ROOTSYS})
+  list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
+endif()
+
 find_package(ROOT QUIET REQUIRED COMPONENTS Core Gpad Hist)
 
 set(FMT_INSTALL OFF)
 find_or_fetch_package(fmt https://github.com/fmtlib/fmt GIT_TAG 10.0.0 VERSION 10.0.0)
 
 # json parser
-set(JSONCPP_WITH_PKGCONFIG_SUPPORT OFF)
-set(JSONCPP_WITH_CMAKE_PACKAGE OFF)
-set(JSONCPP_WITH_TESTS OFF)
+# set(JSONCPP_WITH_PKGCONFIG_SUPPORT OFF)
+# set(JSONCPP_WITH_CMAKE_PACKAGE OFF)
+# set(JSONCPP_WITH_TESTS OFF)
 
 # cmake-format: off
-find_or_fetch_package(jsoncpp
-  https://github.com/open-source-parsers/jsoncpp
-  VERSION 1.9.5 GIT_TAG master FETCH)
+# find_or_fetch_package(jsoncpp
+#   https://github.com/open-source-parsers/jsoncpp
+#   VERSION 1.9.5 GIT_TAG master FETCH)
 # cmake-format: on
 
-include_directories(/usr/include/jsoncpp/)
+# include_directories(/usr/include/jsoncpp/)
 # set(jsoncpp_dep jsoncpp) else() set(jsoncpp_dep jsoncpp_lib) endif()
 
 find_package(RootTools REQUIRED)
@@ -51,14 +54,19 @@ shared_or_static(${PROJECT_NAME})
 add_library(
     Midas
     ${Midas_LIBRARY_TYPE}
-    source/axis_config.cpp
-    source/basic_context.cpp
-    source/basic_distribution.cpp
-    source/context.cpp
-    source/distribution.cpp
-    source/observable.cpp
-    source/detail.cpp
 )
+
+target_sources(Midas
+    PRIVATE
+        source/axis_config.cpp
+        source/basic_context.cpp
+        source/basic_distribution.cpp
+        source/context.cpp
+        source/distribution.cpp
+        source/observable.cpp
+        source/detail.cpp
+)
+
 add_library(Midas::Midas ALIAS Midas)
 
 target_link_libraries(Midas PUBLIC ROOT::Core ROOT::Gpad pandora::pandora PRIVATE HelloFitty::HelloFitty $<BUILD_INTERFACE:jsoncpp>)
@@ -112,7 +120,7 @@ target_include_directories(
     "$<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>"
 )
 
-option(BUILD_DICTIONARY "Build ROOT dictionary." OFF)
+option(BUILD_DICTIONARY "Build ROOT dictionary." ON)
 if (BUILD_DICTIONARY)
   # cmake-format: off
   root_generate_dictionary(G__Midas_cc midas.hpp

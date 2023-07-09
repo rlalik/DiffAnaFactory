@@ -5,8 +5,6 @@
 
 #include <TString.h>
 
-#include <json/json.h>
-
 namespace midas
 {
 
@@ -121,11 +119,11 @@ struct json_file_info
 
 auto find_json_file(const char* initial_path, const char* filename, int search_depth = -1) -> json_file_info;
 
-auto json_read_TString_key(const Json::Value& jsondata, const char* key, TString& target) -> bool;
-auto json_read_int_key(const Json::Value& jsondata, const char* key, int& target) -> bool;
-auto json_read_uint_key(const Json::Value& jsondata, const char* key, uint& target) -> bool;
-auto json_read_float_key(const Json::Value& jsondata, const char* key, float& target) -> bool;
-auto json_read_double_key(const Json::Value& jsondata, const char* key, double& target) -> bool;
+// auto json_read_TString_key(const Json::Value& jsondata, const char* key, TString& target) -> bool;
+// auto json_read_int_key(const Json::Value& jsondata, const char* key, int& target) -> bool;
+// auto json_read_uint_key(const Json::Value& jsondata, const char* key, uint& target) -> bool;
+// auto json_read_float_key(const Json::Value& jsondata, const char* key, float& target) -> bool;
+// auto json_read_double_key(const Json::Value& jsondata, const char* key, double& target) -> bool;
 
 } // namespace detail
 

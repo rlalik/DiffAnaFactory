@@ -133,7 +133,7 @@ private:
     Float_t min;        // minimum axis value
     Float_t max;        // maximum axis value
     Double_t* bins_arr; //! here one can put custom bins division array
-    Float_t delta;      //! CAUTION: overriden by validate(), do not set by hand
+    Float_t delta;      //! CAUTION: overridden by validate(), do not set by hand
 
     ClassDef(axis_config, 1)
 };
@@ -196,7 +196,7 @@ public:
 
     /// Cast current context to new dimension, either of lwoer or higher order.
     /// @param new_name new context name
-    /// @param new_dim new context domension
+    /// @param new_dim new context dimension
     /// @return new context of requested dimension
     auto cast(TString new_name, dimension new_dim) const -> basic_context;
     /// Reduce dimension by 1
@@ -475,7 +475,7 @@ template <class T> auto bin_normalization(T* fac) -> void
 /// Apply angula distribution to a histograms. Makes sens only if the x-axis is a cosTheta in cm frame of the system in
 /// which the distribution exists.
 /// @param fac the midas::distribution object
-/// @param a2,a4 the paramaters
+/// @param a2,a4 the parameters
 template <class T>
 auto apply_ang_distribution(T* fac, double a2, double a4, double corr_a2 = 0.0, double corr_a4 = 0.0) -> void
 {

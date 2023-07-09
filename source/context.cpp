@@ -79,7 +79,7 @@ context::~context() {}
 //         return false;
 //     }
 //     else
-//         fmt::print("  Parsing successfull\n");
+//         fmt::print("  Parsing successful\n");
 //
 //     if (!ana.isMember(ctx_name))
 //     {

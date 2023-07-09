@@ -19,8 +19,6 @@
 #include "detail.hpp"
 #include "midas.hpp"
 
-#include <json/json.h>
-
 #include <fmt/core.h>
 
 #include <fstream>
@@ -140,7 +138,7 @@ auto basic_context::expand(axis_config extra_dim) -> context
 //         return false;
 //     }
 //     else
-//         fmt::print("  Parsing successfull\n");
+//         fmt::print("  Parsing successful\n");
 //
 //     if (!ana.isMember(ctx_name))
 //     {
