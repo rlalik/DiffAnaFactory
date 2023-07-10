@@ -75,9 +75,9 @@ TEST_F(TestsDistribution, Operators)
     ASSERT_FALSE(*fac_2d == *fac_3d);
     ASSERT_FALSE(*fac_3d == *fac_1d);
 
-    // ASSERT_TRUE(*fac_1d == *fac_1d);
-    // ASSERT_TRUE(*fac_2d == *fac_2d);
-    // ASSERT_TRUE(*fac_3d == *fac_3d);
+    ASSERT_TRUE(*fac_1d == *fac_1d);
+    ASSERT_TRUE(*fac_2d == *fac_2d);
+    ASSERT_TRUE(*fac_3d == *fac_3d);
 }
 
 // TEST_F(TestsDistribution, Scale)

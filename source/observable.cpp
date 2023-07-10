@@ -133,7 +133,7 @@ auto observable::map_1d(const axis_config& v_axis) -> void
 
     auto fname = format_canvas_name(0);
     canvases[0] = reg_canvas(fname.Data(), fname.Data(), 800, 600);
-    canvases[0]->DivideSquare(nbins_x);
+    if (!canvases[0]->GetListOfPrimitives()->GetEntries()) canvases[0]->DivideSquare(nbins_x);
 }
 
 auto observable::map_2d(const axis_config& v_axis) -> void
@@ -157,7 +157,8 @@ auto observable::map_2d(const axis_config& v_axis) -> void
         }
         auto fname = format_canvas_name(i);
         canvases[int2size_t(i)] = reg_canvas(fname.Data(), fname.Data(), 800, 600);
-        canvases[int2size_t(i)]->DivideSquare(nbins_y);
+        if (!canvases[int2size_t(i)]->GetListOfPrimitives()->GetEntries())
+            canvases[int2size_t(i)]->DivideSquare(nbins_y);
     }
 }
 
@@ -185,7 +186,8 @@ auto observable::map_3d(const axis_config& v_axis) -> void
             }
             auto fname = format_canvas_name(i, j);
             canvases[int2size_t(i + j * nbins_x)] = reg_canvas(fname.Data(), fname.Data(), 800, 600);
-            canvases[int2size_t(i + j * nbins_x)]->DivideSquare(nbins_z);
+            if (!canvases[int2size_t(i + j * nbins_x)]->GetListOfPrimitives()->GetEntries())
+                canvases[int2size_t(i + j * nbins_x)]->DivideSquare(nbins_z);
         }
     }
 }

@@ -32,8 +32,8 @@ int main()
     ctx_sig->print();
     auto dist_sig = midas::distribution(*ctx_sig, &box_sig);
     dist_sig.prepare();
-    // dist_sig.transform([](TH1* h) { h->Print(); });
-    // dist_sig.transform([](TCanvas* c) { c->Print(); });
+    dist_sig.transform([](TH1* h) { /*h->Print();*/ });
+    dist_sig.transform([](TCanvas* c) { /*c->Print();*/ });
 
     hf::fitter hf;
     hf.set_verbose(true);

@@ -78,7 +78,9 @@ private:
 
     TCanvas* reg_canvas(const char* name, const char* title, int width, int height) {
         if (box)
+        {
             return box->reg_canvas(name, title, width, height);
+        }
         else {
             auto c = new TCanvas(name, title, width, height);
             garbage.push_back(c);

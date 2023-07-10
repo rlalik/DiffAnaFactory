@@ -58,22 +58,26 @@ int main()
     dist.finalize();
     dist_sig.finalize();
 
-    dist.transform([](TCanvas* c) { c->SetMargin(0.20f, 0.15f, 0.15f, 0.05f); });
+    auto format_h = [](TH1* h)
+    {
+        h->GetXaxis()->SetLabelSize(0.06f);
+        h->GetXaxis()->SetTitleSize(0.06f);
+        h->GetXaxis()->SetNdivisions(505);
 
-    dist.transform(
-        [](TH1* h)
-        {
-            h->GetXaxis()->SetLabelSize(0.06f);
-            h->GetXaxis()->SetTitleSize(0.06f);
-            h->GetXaxis()->SetNdivisions(505);
+        h->GetYaxis()->SetLabelSize(0.06f);
+        h->GetYaxis()->SetTitleSize(0.06f);
 
-            h->GetYaxis()->SetLabelSize(0.06f);
-            h->GetYaxis()->SetTitleSize(0.06f);
+        h->Print();
+    };
 
-            h->Print();
-        });
+    auto format_c = [](TCanvas* c) { c->SetMargin(0.20f, 0.15f, 0.15f, 0.05f); };
+    dist.transform(format_h);
+    dist.transform(format_c);
 
-    dist.transform([](TCanvas* c) { c->Print(".png"); });
+    dist_sig.transform(format_h);
+    dist_sig.transform(format_c);
+
+    // dist.transform([](TCanvas* c) { c->Print(".png"); });
 
     box.list_registered_objects();
     box_sig.list_registered_objects();

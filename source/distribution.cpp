@@ -475,7 +475,7 @@ auto distribution::fit_cell_hist(TH1* hist, hf::fitter& hf_fitter, double min_en
 
     // if fit converged retrieve fit functions from histogram
     // otherwise nothing to do here
-    if (!res) return {res, hfp};
+    if (!res.first) return res;
 
     // 	tfSum = dynamic_cast<TF1*<(hist->GetListOfFunctions()->At(0);
     auto tfSig = dynamic_cast<TF1*>(hist->GetListOfFunctions()->At(1));
