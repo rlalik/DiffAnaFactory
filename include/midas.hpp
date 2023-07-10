@@ -306,6 +306,12 @@ private:
     ClassDefOverride(context, 1)
 };
 
+enum class save_mode
+{
+    create,
+    update
+};
+
 class MIDAS_EXPORT basic_distribution : public TObject
 {
 protected:
@@ -341,7 +347,7 @@ public:
     auto set_draw_options(const char* draw_opts) -> void { drawOpts = draw_opts; }
 
     virtual auto save(TFile* f /* = nullptr*/, bool verbose = false) -> bool;
-    virtual auto save(const char* filename /* = nullptr*/, bool verbose = false) -> bool;
+    virtual auto save(const char* filename, save_mode mode, bool verbose = false) -> bool;
 
     template <typename T, typename... Types> T* reg_hist(const char* name, const char* title, Types... arguments)
     {
@@ -388,9 +394,8 @@ protected:
     // ClassDef(DistributionFactory, 1);
 };
 
-/// Fit callback
-using FitCallback = std::function<void(distribution* fac, basic_distribution* sigfac, int fit_res, TH1* h, int x_pos,
-                                       int y_pos, int z_pos)>;
+using FitCallbackF =
+    std::function<void(distribution* fac, TVirtualPad* cpad, TH1* chist, int fit_res, int x_pos, int y_pos, int z_pos)>;
 
 class MIDAS_EXPORT distribution : public basic_distribution
 {
@@ -440,22 +445,18 @@ public:
         transform_v(transform_function);
     }
 
-    virtual void applyBinomErrors(TH1* N) override;
-
     auto save(TFile* f /* = nullptr*/, bool verbose = false) -> bool override;
-    auto save(const char* filename /* = nullptr*/, bool verbose = false) -> bool override;
+    auto save(const char* filename, save_mode mode, bool verbose = false) -> bool override;
 
-    void fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, hf::fit_entry& stdfit, bool integral_only = false);
-    bool fit_cell_hist(TH1* hist, hf::fit_entry* hfp, double min_entries = 0);
+    auto fit_cells_hists(hf::fitter& hf_fitter, int signal_function_number, FitCallbackF func = {}) -> void;
+    auto fit_cell_hist(TH1* hist, hf::fitter& hf_fitter, double min_entries = 0) -> std::pair<bool, hf::fit_entry*>;
 
-    void set_fit_callback(FitCallback cb) { fit_callback = std::move(cb); }
     virtual void prepare_cells_canvas();
 
 private:
     context ctx;
     std::unique_ptr<observable> cells;
     TObjArray* objects_fits; //!
-    FitCallback fit_callback;
 
     // ClassDef(DifferentialFactory, 1);
 };

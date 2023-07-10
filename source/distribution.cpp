@@ -74,9 +74,7 @@ DifferentialFactory& DifferentialFactory::operator=(const DifferentialFactory& f
 
 auto distribution::prepare() -> void
 {
-    ctx.prepare();
     basic_distribution::prepare();
-    if (box) box->reg_object(&ctx);
     objects_fits = new TObjArray();
     objects_fits->SetName(ctx.name + "_fits");
 
@@ -145,7 +143,7 @@ auto distribution::reinit() -> void
 
 auto distribution::fill(Float_t weight) -> void
 {
-    basic_distribution::fill(weight);
+    // basic_distribution::fill(weight);
     if (dimension::DIM3 == ctx.dim)
         cells->fill_3d(*ctx.x.get_var(), *ctx.y.get_var(), *ctx.z.get_var(), *ctx.v.get_var(), weight);
     else if (dimension::DIM2 == ctx.dim)
@@ -156,7 +154,7 @@ auto distribution::fill(Float_t weight) -> void
 
 auto distribution::finalize(const char* draw_opts) -> void
 {
-    prepare_canvas(draw_opts);
+    basic_distribution::finalize(draw_opts);
     prepare_cells_canvas();
 }
 
@@ -183,16 +181,9 @@ auto distribution::transform_v(std::function<void(TCanvas* h)> transform_functio
     }
 }
 
-// TODO move away
-auto distribution::applyBinomErrors(TH1* N) -> void
+auto distribution::save(const char* filename, save_mode mode, bool verbose) -> bool
 {
-    basic_distribution::applyBinomErrors(N);
-    // FIXME do it for cells ?
-}
-
-auto distribution::save(const char* filename, bool verbose) -> bool
-{
-    auto f = TFile::Open(filename, "RECREATE");
+    auto f = TFile::Open(filename, mode == save_mode::update ? "UPDATE" : "RECREATE");
     auto res = save(f, verbose);
     f->Close();
     return res;
@@ -200,7 +191,12 @@ auto distribution::save(const char* filename, bool verbose) -> bool
 
 auto distribution::save(TFile* f, bool verbose) -> bool
 {
-    if (box) return box->export_structure(f, verbose);
+    if (box)
+    {
+        box->reg_object(&ctx, ctx.GetName());
+        if (verbose) box->list_registered_objects();
+        return box->export_structure(f, verbose);
+    }
     return false;
 }
 
@@ -317,17 +313,11 @@ auto distribution::prepare_cells_canvas() -> void
     }
 }
 
-auto distribution::fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, hf::fit_entry& stdfit,
-                                   bool integral_only) -> void
+auto distribution::fit_cells_hists(hf::fitter& hf_fitter, int signal_function_number, FitCallbackF func) -> void
 {
-    // 	FitResultData res;
-    bool res;
-
     TLatex nofit_text;
     nofit_text.SetTextAlign(23);
     nofit_text.SetNDC();
-
-    int info_text = 0;
 
     auto lx = cells->get_bins_x();
     auto ly = cells->get_bins_y();
@@ -358,47 +348,49 @@ auto distribution::fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, h
                 TH1D* hfit = cells->get_hist(bx, by, bz);
                 hfit->SetStats(0);
                 hfit->Draw();
-                info_text = 0;
-
-                if (!integral_only)
+                enum class fit_search_status
                 {
-                    auto hfp = hf.find_fit(hfit);
+                    notinit,
+                    fitted,
+                    disabled,
+                    ignored
+                } info_text = fit_search_status::notinit;
 
-                    bool cloned = false;
-                    /*                    if (!hfp)
-                                        {
-                                            cloned = true;
-                                            hfp = stdfit.clone(hfit->GetName());
-                                            ff.insertParameters(hfp);
-                                        }
-                    */                    // 				bool hasfunc = ( fflags == FitterFactory::USE_FOUND);
-                    bool hasfunc = true;
+                if (signal_function_number >= 0)
+                {
+                    auto hfp = hf_fitter.find_fit(hfit);
+                    // if (!hfp) continue;
 
-                    if (((!hasfunc) or
-                         (hasfunc and !hfp->get_flag_disabled())) /*and*/ /*(hDiscreteXYDiff[i][j]->GetEntries()
-                                                                      > 50)*/
-                        /* and (hDiscreteXYDiff[i][j]->GetRMS() < 15)*/)
+                    if (hfp and hfp->get_flag_disabled())
+                    {
+                        std::cout << "Fit for " << hfit->GetName() << " is disabled\n";
+                        info_text = fit_search_status::disabled;
+                    }
+                    else
+
+                        if (hfp or (!hfp and hf_fitter.has_generic_entry()))
                     {
                         if ((hfit->GetEntries() / hfit->GetRMS()) < 5)
                         {
-                            // 						PR(( hDiscreteXYDiff[i][j]->GetEntries() /
-                            // hDiscreteXYDiff[i][j]->GetRMS() ));
-                            //						pad->SetFillColor(40);		// FIXME I don't want colors
-                            // in the putput
-                            info_text = 1;
+                            // to low statistics to fit? Should it be for decision to the user?
+                            info_text = fit_search_status::ignored;
                         }
                         else
                         {
-                            if (!cloned)
-                                printf("+ Fitting %s with custom function\n", hfit->GetName());
-                            else
-                                printf("+ Fitting %s with standard function\n", hfit->GetName());
+                            info_text = fit_search_status::fitted;
 
-                            res = fit_cell_hist(hfit, hfp);
+                            auto res = fit_cell_hist(hfit, hf_fitter);
 
-                            //                            if (res) hfp->update();
+                            auto signal_function = res.second->get_function_object(signal_function_number);
+                            auto signal_integral =
+                                signal_function.Integral(hfp->get_fit_range_min(), hfp->get_fit_range_max());
 
-                            if (fit_callback) fit_callback(this, sigfac, res, hfit, bx, by, bz);
+                            get_signal_hist()->SetBinContent(bx + 1, by + 1, bz + 1, signal_integral);
+                            get_signal_hist()->SetBinError(bx + 1, by + 1, bz + 1, sqrt(signal_integral));
+                            // TODO make proper errors calculations and set it
+
+                            if (func) func(this, gPad, hfit, res.first, bx, by, bz);
+                            // if (fit_callback) fit_callback(this, sigfac, res, hfit, bx, by, bz);
 
                             // 						FIXME
                             // 						std::cout << "    Signal: " << res.signal << " +/- "
@@ -419,30 +411,11 @@ auto distribution::fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, h
                             // 						}
                         }
                     }
-                    else
-                    {
-                        //					pad->SetFillColor(42);
-                        info_text = 2;
-                    }
                 }
                 else
                 {
-                    // 				FIXME
-                    // 				res.signal = hDiscreteXYDiff[i][j]->Integral();
-
-                    // 				if (res.signal < 0)  // FIXME old value 500
-                    // 				{
-                    // 					res.signal = 0;
-                    // 				}
-
-                    // 				res.signal_err = RootTools::calcTotalError( hDiscreteXYDiff[i][j],
-                    // 1, hDiscreteXYDiff[i][j]->GetNbinsX() );
-                    // hSliceXYDiff[i]->SetBinContent(1+j, res.signal);
-                    // hSliceXYDiff[i]->SetBinError(1+j, res.signal_err);
-                    // 				hDiscreteXYSig->SetBinContent(1+i, 1+j, res.signal);
-                    // 				hDiscreteXYSig->SetBinError(1+i, 1+j, res.signal_err);
-
-                    if (fit_callback) fit_callback(this, sigfac, -1, hfit, bx, by, bz);
+                    // FIXME should fill the signal histogram with the integral of cell histogram
+                    if (func) func(this, gPad, hfit, false, bx, by, bz);
                 }
 
                 Double_t hmax = hfit->GetBinContent(hfit->GetMaximumBin());
@@ -451,13 +424,17 @@ auto distribution::fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, h
 
                 switch (info_text)
                 {
-                    case 1:
-                        nofit_text.DrawLatex(0.65f, 0.65f, "No fit");
+                    case fit_search_status::fitted:
+                        nofit_text.DrawLatex(0.65, 0.65, "No fit");
                         break;
-                    case 2:
-                        nofit_text.DrawLatex(0.65f, 0.65f, "Fit disabled");
+                    case fit_search_status::disabled:
+                        nofit_text.DrawLatex(0.65, 0.65, "Fit disabled");
+                        break;
+                    case fit_search_status::ignored:
+                        std::cout << "This one is ignored, dunno why\n";
                         break;
                     default:
+                        std::cout << "Something went wrong\n";
                         break;
                 }
 
@@ -476,48 +453,37 @@ auto distribution::fit_cells_hists(basic_distribution* sigfac, hf::fitter& hf, h
     // 	else
     // 		hDiscreteXYSig->Draw("colz");
 
-    if (!sigfac) return;
-
     // RT::NicePalette(dynamic_cast<TH2*>(sigfac->hSignalCounter.get()), 0.05f); FIXME
 
-    printf("Raw/fine binning counts:  %f / %f  for %s\n", sigfac->get_signal_hist()->Integral(),
-           sigfac->get_signal_hist()->Integral(), ctx.hist_name.Data());
+    // printf("Raw/fine binning counts:  %f / %f  for %s\n", sigfac->get_signal_hist()->Integral(),
+    // sigfac->get_signal_hist()->Integral(), ctx.hist_name.Data());
 }
 
-bool distribution::fit_cell_hist(TH1* hist, hf::fit_entry* hfp, double min_entries)
+auto distribution::fit_cell_hist(TH1* hist, hf::fitter& hf_fitter, double min_entries)
+    -> std::pair<bool, hf::fit_entry*>
 {
-    Int_t bin_l = hist->FindBin(hfp->get_fit_range_min());
-    Int_t bin_u = hist->FindBin(hfp->get_fit_range_max());
+    auto hfp = hf_fitter.find_fit(hist);
 
-    // rebin histogram if requested
-    if (hfp->get_flag_rebin() != 0) hist->Rebin(hfp->get_flag_rebin());
-
-    // if no data in requested range, nothing to do here
-    if (hist->Integral(bin_l, bin_u) == 0) return false;
+    if (hist->Integral() < min_entries) return {false, hfp};
 
     // remove all saved function, potentially risky move
     // if has stored other functions than fit functions
     hist->GetListOfFunctions()->Clear();
 
-    // declare functions for fit and signal
-    // 	TF1 * tfSum = nullptr;
-    TF1* tfSig = nullptr;
-
     // do fit using FitterFactory
-    hf::fitter hf;
-    bool res = hf.fit(hfp, hist, "B,Q", "");
+    auto res = hf_fitter.fit(hist, "B,Q", "");
 
     // if fit converged retrieve fit functions from histogram
     // otherwise nothing to do here
-    if (!res) return false;
+    if (!res) return {res, hfp};
 
     // 	tfSum = dynamic_cast<TF1*<(hist->GetListOfFunctions()->At(0);
-    tfSig = dynamic_cast<TF1*>(hist->GetListOfFunctions()->At(1));
+    auto tfSig = dynamic_cast<TF1*>(hist->GetListOfFunctions()->At(1));
 
     // do not draw Sig function in the histogram
-    tfSig->SetBit(TF1::kNotDraw);
+    if (tfSig) tfSig->SetBit(TF1::kNotDraw);
 
-    return true;
+    return {true, hfp};
 }
 
 // auto distribution::reset() -> void FIXME

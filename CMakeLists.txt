@@ -26,7 +26,7 @@ find_or_fetch_package(fmt https://github.com/fmtlib/fmt GIT_TAG 10.0.0 VERSION 1
 
 find_package(RootTools REQUIRED)
 find_package(Pandora 0.9.4 REQUIRED)
-find_package(HelloFitty REQUIRED)
+find_package(HelloFitty 0.9.6 REQUIRED)
 
 # find_package(HistAsymmErrors QUIET)
 if(HistAsymmErrors_FOUND)

@@ -63,48 +63,48 @@ auto copyHistogram(TH1* src, TH1* dst, bool with_functions) -> bool
     return true;
 }
 
-auto find_json_file(const char* initial_path, const char* filename, int search_depth) -> json_file_info
-{
-    const size_t max_len = 1024 * 16;
-    int depth_counter = 0;
-    std::array<char, PATH_MAX + 1> resolv_name;
-    std::array<char, PATH_MAX + 1> test_path;
-    struct stat buffer;
-
-    strncpy(test_path.data(), initial_path, max_len);
-
-    json_file_info json_file;
-
-    char* ret_val = 0;
-    while (true)
-    {
-        ret_val = realpath(test_path.data(), resolv_name.data());
-        if (!ret_val) break;
-
-        std::string name = resolv_name.data();
-        name += "/";
-        name += filename;
-
-        if (stat(name.c_str(), &buffer) == 0)
-        {
-            json_file.found = true;
-            json_file.path = name;
-            break;
-        }
-
-        strncpy(test_path.data(), resolv_name.data(), max_len);
-        strncpy(test_path.data() + strlen(test_path.data()), "/..", 4);
-
-        if (strcmp(resolv_name.data(), "/") == 0) break;
-
-        ++depth_counter;
-        if (search_depth >= 0 and (depth_counter > search_depth)) break;
-    }
-
-    if (json_file.found) fmt::print(" Found json config at {}\n", json_file.path.Data());
-
-    return json_file;
-}
+// auto find_json_file(const char* initial_path, const char* filename, int search_depth) -> json_file_info
+// {
+//     const size_t max_len = 1024 * 16;
+//     int depth_counter = 0;
+//     std::array<char, PATH_MAX + 1> resolv_name;
+//     std::array<char, PATH_MAX + 1> test_path;
+//     struct stat buffer;
+//
+//     strncpy(test_path.data(), initial_path, max_len);
+//
+//     json_file_info json_file;
+//
+//     char* ret_val = 0;
+//     while (true)
+//     {
+//         ret_val = realpath(test_path.data(), resolv_name.data());
+//         if (!ret_val) break;
+//
+//         std::string name = resolv_name.data();
+//         name += "/";
+//         name += filename;
+//
+//         if (stat(name.c_str(), &buffer) == 0)
+//         {
+//             json_file.found = true;
+//             json_file.path = name;
+//             break;
+//         }
+//
+//         strncpy(test_path.data(), resolv_name.data(), max_len);
+//         strncpy(test_path.data() + strlen(test_path.data()), "/..", 4);
+//
+//         if (strcmp(resolv_name.data(), "/") == 0) break;
+//
+//         ++depth_counter;
+//         if (search_depth >= 0 and (depth_counter > search_depth)) break;
+//     }
+//
+//     if (json_file.found) fmt::print(" Found json config at {}\n", json_file.path.Data());
+//
+//     return json_file;
+// }
 
 // auto json_read_TString_key(const Json::Value& jsondata, const char* key, TString& target) -> bool
 // {

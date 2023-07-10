@@ -243,12 +243,8 @@ void basic_distribution::prepare_canvas(const char* draw_opts)
 
     signal_canvas->cd();
     signal_histogram->Draw(colzopts);
-    signal_histogram->SetMarkerColor(kWhite);
-    signal_histogram->SetMarkerSize(1.6f);
-    signal_histogram->Sumw2();
+    signal_canvas->Update();
 
-    // RT::NicePalette(dynamic_cast<TH2*>(signal_histogram.get()), 0.05f);
-    // RT::NoPalette(dynamic_cast<TH2*>(signal_histogram.get()));
     gPad->Update();
 }
 
@@ -291,9 +287,9 @@ auto basic_distribution::validate() const -> bool
     return true;
 }
 
-auto basic_distribution::save(const char* filename, bool verbose) -> bool
+auto basic_distribution::save(const char* filename, save_mode mode, bool verbose) -> bool
 {
-    auto f = TFile::Open(filename, "RECREATE");
+    auto f = TFile::Open(filename, mode == save_mode::update ? "UPDATE" : "RECREATE");
     auto res = save(f, verbose);
     f->Close();
     return res;
@@ -301,7 +297,12 @@ auto basic_distribution::save(const char* filename, bool verbose) -> bool
 
 auto basic_distribution::save(TFile* f, bool verbose) -> bool
 {
-    if (box) return box->export_structure(f, verbose);
+    if (box)
+    {
+        box->reg_object(&ctx, ctx.GetName());
+        if (verbose) box->list_registered_objects();
+        return box->export_structure(f, verbose);
+    }
     return false;
 }
 

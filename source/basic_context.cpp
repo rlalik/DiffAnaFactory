@@ -273,10 +273,10 @@ void basic_context::prepare()
 
     if (0 == dir_name.Length()) dir_name = hist_name;
 
-    if (name.EndsWith("_midas_ctx"))
+    if (name.EndsWith("_ctx"))
         SetName(name);
     else
-        SetName(name + "_midas_ctx");
+        SetName(name + "_ctx");
 
     TString hunit = "1/";
     if (dim >= dimension::DIM1)
