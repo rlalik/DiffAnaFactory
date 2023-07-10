@@ -24,20 +24,6 @@ find_package(ROOT QUIET REQUIRED COMPONENTS Core Gpad Hist)
 set(FMT_INSTALL OFF)
 find_or_fetch_package(fmt https://github.com/fmtlib/fmt GIT_TAG 10.0.0 VERSION 10.0.0)
 
-# json parser
-# set(JSONCPP_WITH_PKGCONFIG_SUPPORT OFF)
-# set(JSONCPP_WITH_CMAKE_PACKAGE OFF)
-# set(JSONCPP_WITH_TESTS OFF)
-
-# cmake-format: off
-# find_or_fetch_package(jsoncpp
-#   https://github.com/open-source-parsers/jsoncpp
-#   VERSION 1.9.5 GIT_TAG master FETCH)
-# cmake-format: on
-
-# include_directories(/usr/include/jsoncpp/)
-# set(jsoncpp_dep jsoncpp) else() set(jsoncpp_dep jsoncpp_lib) endif()
-
 find_package(RootTools REQUIRED)
 find_package(Pandora 0.9.4 REQUIRED)
 find_package(HelloFitty REQUIRED)
@@ -69,7 +55,7 @@ target_sources(Midas
 
 add_library(Midas::Midas ALIAS Midas)
 
-target_link_libraries(Midas PUBLIC ROOT::Core ROOT::Gpad pandora::pandora PRIVATE HelloFitty::HelloFitty $<BUILD_INTERFACE:jsoncpp>)
+target_link_libraries(Midas PUBLIC ROOT::Core ROOT::Gpad pandora::pandora PRIVATE HelloFitty::HelloFitty)
 
 if (fmt_FETCHED)
   set(FMT_TARGET $<BUILD_INTERFACE:fmt::fmt-header-only>)
